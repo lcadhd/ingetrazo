@@ -171,7 +171,7 @@ IngeTrazo 0.5.7 (2026-10-11), passed, and left the document unchanged afterwards
 
 *Live-tested in IngeTrazo 0.5.7.*
 
-Copies the selection (groups, components, loose faces/edges) in a 1D/2D/3D grid with per-copy move, rotate and scale, like the 3ds Max Array dialog. **In the app:** Extensions ▸ Array…, right-click ▸ Array…, and a one-button PESI3D toolbar (all open a non-modal dialog).
+Copies the selection (groups, components, loose faces/edges) in a 1D/2D/3D grid with per-copy move, rotate and scale. **In the app:** Extensions ▸ Array…, right-click ▸ Array…, and a one-button PESI3D toolbar (all open a non-modal dialog).
 
 **From MCP:** Full — the whole array is a pure parameter dict + a `Command` that works on the current selection, no UI needed.
 
@@ -368,7 +368,7 @@ print(len(m.sample(d)), len(g.mesh.edges))
 
 *Live-tested in IngeTrazo 0.5.7.*
 
-Six point-driven tools: Mirror (plane by 3 points), Scale (ratio of two distances), Rotate (angle between two directions), Align (3 source → 3 target points, AutoCAD style), Array (step vector × N) and Polar Array (axis, N, total angle). **In the app:** the «3D Modifiers» toolbar (interactive tools: click points; no menu entries).
+Six point-driven tools: Mirror (plane by 3 points), Scale (ratio of two distances), Rotate (angle between two directions), Align (3 source → 3 target points), Array (step vector × N) and Polar Array (axis, N, total angle). **In the app:** the «3D Modifiers» toolbar (interactive tools: click points; no menu entries).
 
 **From MCP:** Partial — the transform matrices are pure functions and the group helpers work from a script; the tools' own flows are click-driven and Mirror/Array/Polar open modal dialogs.
 
@@ -563,7 +563,7 @@ print(len(s.group.mesh.edges), len(s.group.mesh.faces), md.group_color(s.group))
 
 *Live-tested in IngeTrazo 0.5.7.*
 
-A Grasshopper-style node graph (sliders, maths, points, curves, boxes/cylinders/spheres, extrude, roofs, image sampler…) whose "IngeTrazo Output" node streams the result into the model live or bakes it as a group. **In the app:** side-tray tab "Node Editor" (can float), Extensions ▸ Node Editor ▸ Open, tool shortcut Ctrl+Shift+N.
+A visual node graph (sliders, maths, points, curves, boxes/cylinders/spheres, extrude, roofs, image sampler…) whose "IngeTrazo Output" node streams the result into the model live or bakes it as a group. **In the app:** side-tray tab "Node Editor" (can float), Extensions ▸ Node Editor ▸ Open, tool shortcut Ctrl+Shift+N.
 
 **From MCP:** Partial — the graph engine and the ~40 node classes run headless; drawing/wiring the visual graph and .itgraph save/load are UI.
 
@@ -687,7 +687,7 @@ Reads DXF/DWG floor plans by layer and builds a BIM model level by level (walls,
   - `PJ.commit(viewport, doc, opts={})` → stores `doc` and rebuilds EVERY cad2ingetrazo group (tagged in `g.ext["cad2ingetrazo"]`; read with `PJ.tag_of(g)` → `{"type","id","level"}`) on layers `"C2I · <level>"`.
   - Sheets: `planes, views, sh = sheets.make(doc["arch"], M.elevations, {"paper":"A3","scale":"auto","cut":1.2,"elev":"yes","sect":"yes","dims":"no","rooms":"yes","prefix":"A-"}); sheets.commit(viewport, planes, views, sh)`.
 - Saved data: `scene.plugin_data["cad2ingetrazo"]` (the project dict); panel choices in QSettings.
-- Needs: `ezdxf` (in IngeTrazo) and `shapely` (NOT in IngeTrazo's requirements — slabs/rooms fail without it); DWG needs LibreDWG `dwg2dxf` (else save as DXF; the AutoCAD/ODA fallbacks are Windows-only).
+- Needs: `ezdxf` (in IngeTrazo) and `shapely` (both bundled with IngeTrazo; slabs and rooms need shapely); DWG needs LibreDWG `dwg2dxf` (else save as DXF; the other converter fallbacks are Windows-only).
 - Pitfalls: `commit` and `sheets.commit` execute their own history commands → extra nested undo step; both raise if it failed (good). `commit` replaces all plugin groups and clears the selection. Avoid `_panel._import`, `export_pdf`, `export_skp`, `export_dxf`, Remove level, About (QFileDialog / QMessageBox). `_panel.show_3d()`/`show_plan()` are safe (view switches). Wall detection needs double-line walls 0.07–0.46 m apart.
 
 ```python
@@ -1216,7 +1216,7 @@ if ok and p.combo_workflows.count():
 
 *Live-tested in IngeTrazo 0.5.7.*
 
-Match the viewport camera to a photo (SketchUp "Match Photo"/fSpy style): photo overlay, draggable red/green(/blue) vanishing-line handles and an origin pin, 2- or 3-point solver (focal, FOV, pitch/yaw, eye), photo-tab "scenes", whole-model rescaling to a known length, and projecting the photo as textures onto faces. **In the app:** side-tray tab «Perspective Match», Extensions ▸ «Perspective Matcher…» (Ctrl+Shift+M), viewport overlay with handles/tabs, right-click ▸ «📷 Project Textures from Photo».
+Match the viewport camera to a photo: photo overlay, draggable red/green(/blue) vanishing-line handles and an origin pin, 2- or 3-point solver (focal, FOV, pitch/yaw, eye), photo-tab "scenes", whole-model rescaling to a known length, and projecting the photo as textures onto faces. **In the app:** side-tray tab «Perspective Match», Extensions ▸ «Perspective Matcher…» (Ctrl+Shift+M), viewport overlay with handles/tabs, right-click ▸ «📷 Project Textures from Photo».
 
 **From MCP:** Partial — the solver and calibration state are scriptable; handle placement is meant for the mouse, and texture projection / scale dialog always show message boxes.
 
