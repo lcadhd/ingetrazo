@@ -5,7 +5,7 @@ Companion to [ai-bridge.md](ai-bridge.md). The bridge has five fixed tools (`run
 inside the live app, where every plugin is already imported, so an agent can call a plugin's
 own functions directly. This page says how, and documents each installed extension.
 
-Written against IngeTrazo 0.5.7 and the extensions catalogue of 2026-10-08
+Written against IngeTrazo 0.5.7 and the extensions catalogue of 2026-10-10
 (<https://ingetrazo.com/extensiones>, <https://github.com/ingelibre/ingetrazo-extensions>).
 The plugin API is not stable; re-check a plugin's entry points after updating it.
 
@@ -44,6 +44,9 @@ print([a.text() for m in viewport.window().menuBar().findChildren(QMenu)
   State a plugin keeps in closures or widgets is only reachable through module globals,
   window attributes or the dock widget (`viewport.window().findChildren(PanelClass)`); each
   section below says where.
+- Geometry types: vertex positions and `g.xform.map(p)` results are `QVector3D` — use
+  `.x() .y() .z()`, not indexing. A group's `xform` is `None` when it has no transform
+  (identity), so guard: `g.xform.map(p) if g.xform is not None else p`.
 - **Prefer the pure builders.** Most geometry plugins have a function that returns a finished
   `Group` (or a new `Mesh`) without touching the document: call it and `groups.append(g)`
   yourself. That is one clean undo step and nothing else runs.
@@ -136,6 +139,7 @@ IngeTrazo 0.5.7 (2026-10-11), passed, and left the document unchanged afterwards
 | Quadrify | `quadrify_tool` | Full | Community | yes |
 | Membrane | `membrane_tool` | Full | Community | yes |
 | JA LineaStyle | `lineas_color` | Full | Community | yes |
+| Angle Dimension | `Angle_Dimension` | Full | Community | yes |
 | Parametric Node Editor | `node_editor` | Partial | Community | yes |
 | OpenTrace BIM | `arquitetura_parametrica` | Full | Community | yes |
 | ArchXQ IT Lite · Architecture by phases | `archxq_it` | Partial | Community | yes |
@@ -556,6 +560,42 @@ pts = [QVector3D(10,1,0), QVector3D(11,1,0), QVector3D(11,2,0), QVector3D(10,2,0
 for a, b in zip(pts, pts[1:] + pts[:1]):
     md.AddSessionSegment(s, a, b, "#1e88e5", 2.0, "solid").do(scene)
 print(len(s.group.mesh.edges), len(s.group.mesh.faces), md.group_color(s.group))
+```
+
+### Angle Dimension — `Angle_Dimension`
+1.0.0 · Ryszard Jurdeczka · MIT · Community
+
+*Live-tested in IngeTrazo 0.5.7.*
+
+Measures the angle at a vertex between two arms (three clicks) and keeps it as a permanent orange overlay — two arms, an arc and a "60.0°" label — stored in the drawing. **In the app:** Extensions ▸ Draw angle dim (Ctrl+Alt+A); Extensions ▸ Angle dim tools ▸ Undo last / Delete (pick) / Clear all / About.
+
+**From MCP:** Full — the maths are pure functions and the stored list is a module global plus `_commit()`; only Clear all / About open message boxes (easy to replicate).
+
+- Module: `ingetrazo_plugin_Angle_Dimension` (single file; private helpers, no public API besides `setup`)
+- Entry points:
+  - `angle_at(vertex, a, b)` → degrees 0–180 (unsigned) between vertex→a and vertex→b, or None if an arm has zero length. `angle_between(u, w)` same for two direction vectors. All args `QVector3D`, world metres.
+  - `arc_points(vertex, a, b, radius, n=48)` → n+1 `QVector3D` on the arc from arm a to arm b (radius in m; the overlay uses 0.3 × shorter arm).
+  - `_DIMS` — working list of `(vertex, a, b, degrees)` tuples (QVector3D ×3, float). Append/delete, then `_commit()` → bool: writes `_APP.set_document_data(_encode(_DIMS))` (nested `SetPluginDataCommand`, one undo step; errors are swallowed → False + status message).
+  - `_encode(dims)` → `{"format": 1, "dimensions": [{"v","a","b": [x,y,z]}]}`; `_decode(data)` → list of tuples (angle recomputed). `_refresh_from_document()` reloads `_DIMS`; `_undo_last()` pops the newest and commits (no dialog).
+  - `_APP` = the plugin's real `ExtensionApp` (key `Angle_Dimension`); `_APP.document_data(None)` reads the stored dict.
+- Saved data: `scene.plugin_data['Angle_Dimension']` (format above). If that key is absent it shows, read-only, data from a key starting `Draw_Angle` (dev revisions). No QSettings, no group data.
+- Needs: nothing extra.
+- Pitfalls:
+  - NEVER call `_clear_all` (QMessageBox.question) or `_show_about` (QMessageBox.information). Clear with `_DIMS.clear(); _commit()`, or `_APP.set_document_data(None)` to remove the key.
+  - The dimensions are free 3D points, not tied to geometry (moving/deleting the model does not update them) and are not core dimensions (`scene.dimensions`). Arms are drawn to exactly the points given.
+  - If the script changes nothing else, run_python drops its own empty step, so the dimension is ONE undo entry; with geometry changes too there are two.
+  - MCP `undo` reverts the data but does not emit `sceneVersionChanged`, so the overlay stays stale until the next run_python (which refreshes it) — or call `_refresh_from_document()`.
+  - The interactive tool (`viewport.set_active_tool(m._tool_class()())`) needs mouse clicks; useless over MCP.
+
+```python
+import sys
+m = sys.modules['ingetrazo_plugin_Angle_Dimension']
+V, A, B = QVector3D(10, 0, 0), QVector3D(12, 0, 0), QVector3D(11, 1.732, 0)
+ang = m.angle_at(V, A, B)                       # 60.0
+m._DIMS.append((V, A, B, ang))
+if not m._commit() or viewport.history.last_error:
+    raise RuntimeError(viewport.history.last_error or "angle dim not saved")
+print(round(ang, 1), len(m._APP.document_data({}).get("dimensions", [])))
 ```
 
 ### Parametric Node Editor — `node_editor`
@@ -1003,36 +1043,41 @@ groups.append(g); print(info["triangles"], m.slope_text(info["slope"]))
 ## 9. Fabrication
 
 ### Cut List — `cutlist`
-0.0.1 · Ronaldo Alves · GPL-3.0-or-later · GitHub, not catalogued (ronaldogalves/cutlist-ingetrazo @ 4e5d910)
+0.0.1 · Ronaldo Alves · GPL-3.0-or-later · GitHub, not catalogued (ronaldogalves/cutlist-ingetrazo @ 6a9166e)
 
 *Live-tested in IngeTrazo 0.5.7.*
 
-Builds a woodworking cut list from leaf groups/components with faces: measures each part's length × width × thickness, finds the board (core), face coverings and edge bands by material role, merges equal parts into lines with quantities, sectioned by board and thickness, and flags odd parts. Read-only on geometry. **In the app:** side-tray tab «Cut List» (Refresh, tag filter, merge toggle, click a line to highlight its parts), Extensions ▸ Cut List ▸ (Show panel / Materials… / Settings…), right-click ▸ «Cut List: part settings…».
+Builds a woodworking cut list from leaf groups/components with faces: measures each part's length × width × thickness, finds the board (core), face coverings and edge bands by material role, merges equal parts into lines with quantities, sectioned by board and thickness, flags odd parts, and exports it (CSV/text, .xlsx, clipboard) through user-named supplier profiles. Read-only on geometry. **In the app:** side-tray tab «Cut List» (Refresh, tag filter, merge toggle, Export…, click a line to highlight its parts), Extensions ▸ Cut List ▸ (Show panel / Materials… / Settings… / Export…), right-click ▸ «Cut List: part settings…».
 
-**From MCP:** Full — extraction, measuring and grouping are plain functions returning dataclasses; only settings/materials editing is dialog-based (their stores are callable directly).
+**From MCP:** Full — extraction, grouping and the export engine (profiles → rows → bytes) are plain functions; only the settings/materials/export windows are dialogs, and a CSV can be written to /tmp without them.
 
-- Module: `ingetrazo_plugin_cutlist` (+ `.host.extract`, `.host.store`, `.host.app`, `.model.parts`, `.model.grouping`, `.model.materials`, `.model.settings`)
+- Module: `ingetrazo_plugin_cutlist` (+ `.host.extract`, `.host.store`, `.host.app`, `.model.parts`, `.model.grouping`, `.model.materials`, `.model.fields`, `.export.profile`, `.export.rows`, `.export.writers`). The `.export.*` modules load lazily: get them with `importlib.import_module('ingetrazo_plugin_cutlist.export.rows')`, not `sys.modules[...]`.
 - Entry points:
-  - `extract(scene, use_selection=True, excluded_tags=frozenset(), include_groups=True)` → `Extraction` (`parts` [RawPart], `groups` uid→Group, `scope` "selection"|"model", `materials`, `tags`, `notices`). Walks selected groups, else every visible group (billboards/hidden skipped).
-  - `read_part(raw, library, override=None)` → `Part` (`length`, `width`, `thickness` m, `core`, `face1`, `face2`, `edges` (length1, length2, width1, width2), `flags`, `excluded`). Material names are the face/group paint label: registry name, texture stem or `"#rrggbb"`.
-  - `build(parts, tolerance=0.001, by_name=False)` → `CutList` (`sections[].material/thickness/lines`, line `length/width/thickness/qty/display_names()/uids`, `excluded`, `flagged`, `unassigned`, `qty`).
-  - `Library()` (empty = every material read as a board) or `Store(app).library()`; `Store(app).settings()`; `Store(app).save_materials([MaterialSpec(name, role=Role.EDGE_BAND…)], remember=False)`; `Store(app).set_overrides({group: PartOverride(exclude=True…)})`.
-  - Live controller: `viewport.window().extension_panels()['extension_cutlist'].widget()._controller` — `.refresh(ask=False)` fills the panel, `.set_highlight(uids)`.
-- Saved data: `scene.plugin_data["cutlist"]` (model settings, materials), `plugin_data["cutlist.numbers"]` ("Group #n" numbers, written without undo), `group.ext["cutlist"]` (part overrides); user defaults in `<user plugins dir>/../cutlist/defaults.json`.
-- Needs: Python ≥ 3.11 (`enum.StrEnum`) and NumPy.
-- Pitfalls: `controller.refresh(ask=True)` (the panel's Refresh, or showing the panel the first time) opens the modal Settings dialog until the scope question is answered; `open_materials`, `open_settings`, `open_part_settings_for` are modal dialogs. `refresh` errors only reach the status bar. Settings/materials/overrides writes are nested undo steps; `remember=True` also writes the user file. With nothing selected the whole model (including the user's other groups) is listed — select your groups for an isolated list.
+  - `extract(scene, use_selection=True, excluded_tags=frozenset(), include_groups=True)` → `Extraction` (`parts` [RawPart], `groups` uid→Group, `scope` "selection"|"model", `materials`, `tags`, `notices`). Walks selected groups, else every visible group.
+  - `read_part(raw, library, override=None)` → `Part` (`uid`, `name` (spaces tidied), `length`/`width`/`thickness` m, `core`, `face1`, `face2`, `edges`, `tag`, `grain`, `can_rotate`, `note`, `flags`, `excluded`). Material names = paint label: registry name, texture stem or `"#rrggbb"`.
+  - `build(parts, tolerance=0.001, *, by_name=False)` → `CutList` (`sections[].material/thickness/lines`, line `core/length/width/qty/display_names()/uids`, `flagged`, `qty`).
+  - Export: `profile.generic()` → `Profile` "Simple CSV" (`;`, `utf-8-sig`, CRLF, whole mm, `,` decimals, header Qty;Name;Length;Width;Thickness;Material;Band L1/L2/W1/W2;Note). `Profile(...)`/`Profile.from_dict(d)`/`dataclasses.replace` for others (`format` text|xlsx|clipboard, `separator`, `rows` merged|per_piece, `split` none|board|field:<name>, `filename` template, `columns` of `Column(header, kind=field|text|template, value)`, `material_codes`/`band_codes`).
+  - `rows.make_rows(cut_list, {uid: Part}, library, profile, part_fields=None, context={"model": stem, "date": iso}, skip_boards=frozenset())` → `Export` (`files[]` `OutFile(name, header, rows of Cell)`, `problems[]` (missing codes/material), `ok`). `name` = safe file name from `profile.filename` (`{model}` → `cutlist_mcp_test.csv`; empty → `cut_list.csv`).
+  - `writers.unencodable(file, profile)` → encoding problems; `writers.file_bytes(file, profile)` → bytes (CSV or .xlsx); `xlsx_bytes(file)`, `clipboard_text(files, profile)`. Write the bytes yourself: `open('/tmp/x/' + f.name, 'wb').write(...)`.
+  - `Store(app)`: `.library()`, `.settings()`, `.overrides(groups)`, `.fields()` (custom fields; `fields.values(tag, own)`), `.profiles()` (user's saved profiles, generic if none), `.save_materials(...)`, `.clear_materials(names, remember=False)`, `.set_overrides({group: PartOverride(...).with_fields({...})})`.
+  - Live controller: `viewport.window().extension_panels()['extension_cutlist'].widget()._controller` — `.refresh(ask=False)` then `.export_session().rows(profile)` gives the panel's exact export (overrides, "Group #n" names, custom fields).
+- Saved data: `scene.plugin_data["cutlist"]` (model settings, materials, `fields`), `plugin_data["cutlist.numbers"]` (written without undo), `group.ext["cutlist"]` (part overrides incl. `fields`); user file `<user plugins dir>/../cutlist/defaults.json` (defaults, materials, fields, `export_profiles`, `last_export_profile`; `CUTLIST_USER_DIR` overrides the folder).
+- Needs: Python ≥ 3.11 and NumPy.
+- Pitfalls: never call `open_export` (modal ExportDialog, and `refresh(ask=True)` first), `open_materials`, `open_settings`, `open_part_settings_for`; `controller.write_files` asks with a QMessageBox if a file exists; `ExportDialog.export()` uses QFileDialog. Check `ex.problems` + `unencodable` before writing — the dialog refuses to export with any. `Store.save_profiles` and `remember=True` write the user's defaults file (no undo). Settings/materials/overrides writes are nested undo steps. With nothing selected the whole model is listed.
 
 ```python
-import sys
+import sys, importlib
 ex = sys.modules['ingetrazo_plugin_cutlist.host.extract']
-pa = sys.modules['ingetrazo_plugin_cutlist.model.parts']
-gr = sys.modules['ingetrazo_plugin_cutlist.model.grouping']
-ma = sys.modules['ingetrazo_plugin_cutlist.model.materials']
-e = ex.extract(scene, use_selection=True)
-cl = gr.build([pa.read_part(r, ma.Library()) for r in e.parts], 0.001)
-for s in cl.sections:
-    for ln in s.lines:
-        print(s.material, round(s.thickness*1000), round(ln.length*1000), round(ln.width*1000), ln.qty, ln.display_names())
+pa, gr, ma = (sys.modules[f'ingetrazo_plugin_cutlist.model.{n}'] for n in ('parts', 'grouping', 'materials'))
+rw, wr, pf = (importlib.import_module(f'ingetrazo_plugin_cutlist.export.{n}') for n in ('rows', 'writers', 'profile'))
+e = ex.extract(scene, use_selection=True); lib = ma.Library()
+parts = [pa.read_part(r, lib) for r in e.parts]
+cl, prof = gr.build(parts, 0.001), pf.generic()
+xp = rw.make_rows(cl, {p.uid: p for p in parts}, lib, prof, context={"model": "job"})
+assert not xp.problems and not any(wr.unencodable(f, prof) for f in xp.files)
+for f in xp.files:
+    open('/tmp/' + f.name, 'wb').write(wr.file_bytes(f, prof))   # /tmp/job.csv
+print([f.name for f in xp.files], sum(len(f.rows) for f in xp.files))
 ```
 
 ## 10. Viewing, rendering and organising
