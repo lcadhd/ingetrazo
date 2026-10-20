@@ -5,7 +5,7 @@ Companion to [ai-bridge.md](ai-bridge.md). The bridge has five fixed tools (`run
 inside the live app, where every plugin is already imported, so an agent can call a plugin's
 own functions directly. This page says how, and documents each installed extension.
 
-Written against IngeTrazo 0.5.7 and the extensions catalogue of 2026-10-10
+Written against IngeTrazo 0.5.9 and the extensions catalogue of 2026-10-20
 (<https://ingetrazo.com/extensiones>, <https://github.com/ingelibre/ingetrazo-extensions>).
 The plugin API is not stable; re-check a plugin's entry points after updating it.
 
@@ -13,11 +13,15 @@ The plugin API is not stable; re-check a plugin's entry points after updating it
 
 - Bundled: `<app>/plugins/` (AI Assistant, AI Bridge, Python Console, Model Info, Solid
   Inspector, Render with Blender). Example extensions (Levels, Polygon properties, Windowizer)
-  ship in `<app>/examples/extensions/` and are installed from **Extensions ▸ Example extensions**.
+  ship in `<app>/examples/extensions/` and, since 0.5.8, are installed from
+  **Extensions ▸ Manage extensions…** like any catalogue extension.
 - Per-user: `$XDG_DATA_HOME/ingetrazo/plugins/` (Linux, default `~/.local/share/...`),
   `%APPDATA%\ingetrazo\plugins\` (Windows). **Extensions ▸ Open plugins folder** opens it.
-  A plugin is one `.py` file or one package folder. Install = copy + restart; uninstall =
-  delete + restart. Verify the SHA-256 against the catalogue entry before installing.
+  A plugin is one `.py` file or one package folder. **Extensions ▸ Manage extensions…**
+  (0.5.8+) installs, updates and removes catalogue extensions after checking their SHA-256.
+  By hand: install = copy + restart; uninstall = delete + restart; verify the SHA-256 first.
+  The stem is whatever folder or file name the extension ships with (case and hyphens
+  included: `planArq-v1`, `igz-uv`, `OpenTrace_BIM`), and it can change between versions.
 - A plugin that fails to import or whose `setup(app)` raises shows as a disabled
   `⚠ name (load error)` entry in the Extensions menu (tooltip = the exception); the app still
   starts. Check from a script:
@@ -73,6 +77,11 @@ finally:
     for c, n, f in reversed(_saved): setattr(c, n, f)
 ```
 
+**Answer startup dialogs first.** A modal dialog left open in the app (for example "Recovered
+drawing" after a restart with unsaved work) blocks the UI thread, so every bridge request queues
+up unanswered until a human closes it. OpenTrace BIM's "EXPERIMENTAL · Initial project setup"
+window, shown on a new document, is not modal and does not block the bridge.
+
 **Know what one `run_python` step can undo.** The step is a `SnapshotImport`: it restores the
 active mesh (`scene.mesh`) and removes groups, layers, saved views, dimensions and text labels
 **added** during the step. It does **not** restore:
@@ -103,7 +112,14 @@ if viewport.history.last_error:
 - ArchXQ IT Lite replaces `History.execute` for the whole app (after every command it checks
   whether ArchXQ groups were moved).
 - Organize Toolbar replaces `MainWindow._on_unhide_last` with its own version.
-- OpenTrace BIM has a self-updater that downloads from the official catalogue. It is off unless enabled in its panel.
+- OpenTrace BIM has its own self-updater, which downloads releases from its author's GitHub, outside
+  the catalogue review. It is off unless enabled in its Home panel. It can also download the
+  Uniclass classification tables on request.
+- Texture Library downloads from Poly Haven only when asked. Scene Automation runs `ffmpeg` /
+  `ffplay` (if installed) for MP4 export and sounds. Display Scale can restart the app.
+- Coloured Tools + Space moves the **Space** shortcut from Select to command search.
+- Automation appends to `automacao-debug.log` in its own plugin folder while it runs (an entry per
+  window that opens), so that file keeps growing.
 - ComfyUI Renderer probes its server URL (3 s timeout) at startup.
 - Point Cloud & Splatting saves invisible proxy box groups in the `.igz`; the clouds themselves are panel state and are not saved.
 
@@ -123,14 +139,14 @@ if viewport.history.last_error:
 "Full" = everything useful is callable without the UI; "Partial" = the core works, some
 features need the UI; "UI only" = use the core APIs named in its section instead.
 "Live-tested" = a test exercising its entry points was run through the bridge in
-IngeTrazo 0.5.7 (2026-10-11), passed, and left the document unchanged afterwards.
+IngeTrazo 0.5.9 (2026-10-20), passed, and left the document unchanged afterwards.
 
 | Extension | Stem | From MCP | Catalogue status | Live-tested |
 |---|---|---|---|---|
 | Array | `array_tool` | Full | Community | yes |
 | IngeTrazo Bevel | `ingetrazo_bevel` | Full | Reviewed | yes |
 | Taper Tool for IngeTrazo | `ingetrazo_taper` | Full | Reviewed | yes |
-| Loop Cut | `loop_cut` | Partial | Reviewed | yes |
+| Loop Cut | `loop_cut` | Partial | Community | yes |
 | Vertex Editor | `vertex_editor` | Partial | Reviewed | yes |
 | IngeTrazo Curve Tools | `ingetrazo_curve_tools` | Full | Community | yes |
 | 3D Modifiers | `igz_modify3d` | Partial | Community | yes |
@@ -141,10 +157,21 @@ IngeTrazo 0.5.7 (2026-10-11), passed, and left the document unchanged afterwards
 | JA LineaStyle | `lineas_color` | Full | Community | yes |
 | Angle Dimension | `Angle_Dimension` | Full | Community | yes |
 | Parametric Node Editor | `node_editor` | Partial | Community | yes |
-| OpenTrace BIM | `arquitetura_parametrica` | Full | Community | yes |
-| ArchXQ IT Lite · Architecture by phases | `archxq_it` | Partial | Community | yes |
+| Parametric solids | `igz_solids` | Full | Community | yes |
+| SubD (subdivision modelling) | `subdiv` | Full | Community | yes |
+| Divide Points | `divide_points` | Full | Community | yes |
+| IngeTrazo Unfold | `unfold` | Full | Community | yes |
+| UV (UV mapping tools) | `igz-uv` | Full | Community | yes |
+| Proxies | `proxy_tool` | Full | Community | yes |
+| OpenTrace BIM | `OpenTrace_BIM` | Full | Community | yes |
+| ArchXQ IT Lite · Architecture by phases | `archxq_it_lite` | Partial | Community | yes |
+| IFC data — read and edit | `ifc_editor` | Full | Community | yes |
+| Walls, doors and windows | `openings` | Full | Community | yes |
+| Walls (masonry from floor plans) | `walls_tool` | Full | Community | yes |
+| Plan Import (PDF floor plans) | `plan_import_tool` | Partial | Community | yes |
 | CAD2IngeTrazo · CAD plans to BIM | `cad2ingetrazo` | Partial | Community | yes |
-| planArq | `planarq` | Full | Reviewed | yes |
+| planArq | `planArq-v1` | Full | Community | yes |
+| AISC steel members | `igz_steel` | Full | Community | yes |
 | Windowizer | `windowizer` | Full | Bundled | yes |
 | IngeTrazo Stair Maker with Railings | `make_stair` | Full | Reviewed | yes |
 | IngeTrazo Kitchen Maker | `ingetrazo_kitchen_maker` | Full | Reviewed | yes |
@@ -155,29 +182,40 @@ IngeTrazo 0.5.7 (2026-10-11), passed, and left the document unchanged afterwards
 | Topology (terrain) | `topology_tool` | Full | Community | yes |
 | Grading | `grading_tool` | Full | Community | yes |
 | Cut List | `cutlist` | Full | not catalogued | yes |
+| Woodworking Cut List (Lista de corte para marcenaria) | `lista_corte_marcenaria` | Full | Community | yes |
+| STEP export | `stepexport` | Full | Community | yes |
+| 3D PDF export | `igz_pdf3d` | Full | Community | yes |
 | Point Cloud & 3D Gaussian Splatting | `pointcloud_splat` | Partial | Community | yes |
 | JA Sun · Sun and shadows | `ja_sun` | Full | Community | yes |
+| igz_sunpath · Sun Path | `igz_sunpath` | Partial | Community | yes |
 | Styles, Shadows and Map toolbars | `igz_tb_toolbar` | Partial | Community | yes |
 | Scenes (scene manager) | `igz_tb_scenes` | Partial | Community | yes |
+| Scene Automation | `scenes_play` | Full | Community | yes |
+| Automation (Automação) | `automacao` | Partial | Community | yes |
 | Phasing Animator for IngeTrazo | `phasing_animator` | Partial | Community | yes |
 | ComfyUI Viewport Renderer | `comfyui_renderer` | Partial | Community | yes |
 | Perspective Matcher | `perspective_matcher` | Partial | Community | yes |
+| Texture Library for IngeTrazo | `texture_library` | Full | Community | yes |
 | MultiView for IngeTrazo | `ingetrazo_multiview` | UI only | Community | yes |
+| Standard Views 2 | `standard_views_2` | Partial | Community | yes |
 | JA Tree · Model outliner | `outliner` | Full | Community | yes |
 | JA Units · Units | `ja_units` | Full | Community | yes |
 | Organize Toolbar | `organize_toolbar` | UI only | Community | yes |
 | Isolate / Unisolate Selection | `isolate_unisolate_selection_toolbar` | Full | not catalogued | yes |
+| Coloured Tools + Space (UI Colores + Space) | `ui_colores_space` | UI only | Community | yes |
+| Custom Icons · SVG icon themes | `custom_icons` | Partial | Community | yes |
+| Display Scale for IngeTrazo | `display_scale` | UI only | Community | yes |
 
 ## 6. Modelling and editing
 
 ### Array — `array_tool`
-1.2 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+1.2.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Copies the selection (groups, components, loose faces/edges) in a 1D/2D/3D grid with per-copy move, rotate and scale. **In the app:** Extensions ▸ Array…, right-click ▸ Array…, and a one-button PESI3D toolbar (all open a non-modal dialog).
 
-**From MCP:** Full — the whole array is a pure parameter dict + a `Command` that works on the current selection, no UI needed.
+**From MCP:** Full — the whole array is a pure parameter dict + a `Command` that works on the current selection, no UI needed (1.2.1 only adds the version to the dialog title).
 
 - Module: `ingetrazo_plugin_array_tool`
 - Entry points:
@@ -210,7 +248,7 @@ print(cmd.copies)                              # 14 new posts
 ### IngeTrazo Bevel — `ingetrazo_bevel`
 1.0.2 · aashishzharbade-arch · GPL-3.0-or-later · Reviewed
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Chamfers or rounds edges of closed, consistently oriented polygon solids: either the selected loose edges/faces or every sharp edge of one selected group. **In the app:** Extensions ▸ IngeTrazo Bevel V1.0 ▸ Bevel selected edges / solid, and the same button on its toolbar (opens a preview dialog).
 
@@ -236,7 +274,7 @@ g.mesh = new; print(n, len(new.faces))
 ### Taper Tool for IngeTrazo — `ingetrazo_taper`
 1.0.0 · aashishzharbade-arch · GPL-3.0-or-later · Reviewed
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Tapers selected groups or loose faces/edges along a 3D axis: the radial distance from the axis is scaled linearly from 1 at the axis start to target/reference at its end (optionally only in one direction, or as a rigid move). **In the app:** Extensions ▸ Taper Tool for IngeTrazo V1.0 and a toolbar button; then four clicks in the viewport (axis start, axis end, reference, target) with a small options window.
 
@@ -261,33 +299,35 @@ groups.remove(g)   # fine here: g was created in this same call
 ```
 
 ### Loop Cut — `loop_cut`
-1.0 · Daniel Wagner · MIT · Reviewed
+1.1.0 · Daniel Wagner · MIT · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
-Inserts one edge ring through a closed strip of quads (at the midpoints of the crossed edges) or, failing that, through a closed planar cross-section perpendicular to the picked edge; open, branching or vertex-touching rings are refused. **In the app:** Extensions ▸ «Corte em loop» and the «LoopTools» toolbar button (an interactive tool: hover an edge for a pink preview, click to cut). UI texts are Portuguese.
+Inserts one edge loop through a closed strip of quads (midpoints of the crossed edges) or, failing that, through a closed planar cross-section perpendicular to the picked edge; 1.1 adds face picking (picks the longest quad ring through the face — cylinder walls), Alt+click to select the green Edge Loop and Shift+click to add the blue Edge Ring. **In the app:** the «LoopTools» toolbar button «Corte em loop» (an interactive tool: hover for a pink preview, click to cut). UI texts are Portuguese.
 
-**From MCP:** Partial — there is no public cut function: `_plan()` is pure, the cut itself (10 lines in `LoopCutTool.on_click`) must be replicated, as below.
+**From MCP:** Partial — no public cut function: the `_plan*` functions are pure, the cut itself (10 lines in `LoopCutTool.on_click`) must be replicated, as below.
 
 - Module: `ingetrazo_plugin_loop_cut`
-- Entry points:
-  - `_plan(mesh, seed_edge)` → `(pairs, crossed_edges, points)`: `pairs` = `{face: (edge_in, edge_out)}`, `points` = `{edge: QVector3D}` where each crossed edge is split. Raises `ValueError` (Portuguese message) when no clean ring exists. Read-only. `seed_edge` is an edge the ring CROSSES (for a box side strip: a vertical edge → horizontal cut at mid-height).
-  - `_loop_plan(mesh, seed)` (quads only, midpoints) and `_plane_plan(mesh, seed)` (plane through the seed's midpoint, normal along the seed) — the two strategies `_plan` tries in that order.
+- Entry points (all read-only, raise `ValueError` with a Portuguese message when no clean ring exists):
+  - `_plan(mesh, seed_edge)` → `(pairs, crossed_edges, points)`: `pairs` = `{face: (edge_in, edge_out)}`, `crossed_edges` = set, `points` = `{edge: QVector3D}` where each crossed edge is split. `seed_edge` is an edge the ring CROSSES (box side strip: a vertical edge → horizontal cut at mid-height). Tries `_loop_plan(mesh, seed)` (quads only, returns `(pairs, edges)`) then `_plane_plan(mesh, seed)` (plane through the seed's midpoint, normal along it).
+  - `_quad_plan_from_face(mesh, face)` → same triple: the LONGEST closed quad loop through a quad face (what a click on a face uses).
+  - `_ring_from_edge(mesh, edge)` → set of edges: the closed coplanar end-to-end ring containing `edge` (e.g. the contour made by a previous cut). Select it with `scene.select(list(ring), mode="add")`.
+  - Edge Loop selection = `scene.select(list(crossed_edges), mode="replace")`.
   - `_tool` (module global) / `viewport.window()._tools['plugin_loop_cut_LoopCutTool']` — the tool; its `on_click` needs a screen pick, not useful from a script.
 - Saved data: none.
 - Needs: nothing extra (`core.topology.split_face_by_chord`).
 - Pitfalls:
-  - Works on whichever mesh you pass, but only `scene.mesh` is restored by `undo`; cut a group's mesh only after opening it, or on a group created in the same call.
-  - Faces with holes, open borders, or a plane through an existing vertex are refused (`ValueError`); catch it or let the call roll back.
+  - Works on whichever mesh you pass, but only `scene.mesh` is restored by `undo`; cut a group's mesh only after opening it, or on geometry created in the same call.
+  - Faces with holes, open borders, a plane through an existing vertex, or branching sections are refused (`ValueError`); catch it or let the call roll back.
   - The cut replaces every face of the ring (new `Face` objects, attrs copied); hold no references to old faces.
-  - No dialogs.
+  - `_ring_from_edge` scans every edge of the mesh (slow on very large meshes). No dialogs.
 
 ```python
 import sys
 from core.topology import split_face_by_chord
 lc = sys.modules['ingetrazo_plugin_loop_cut']
-def loop_cut(mesh, seed):                      # same as LoopCutTool.on_click's mutate
-    pairs, _crossed, points = lc._plan(mesh, seed)
+def loop_cut(mesh, plan):                       # same as LoopCutTool.on_click's mutate
+    pairs, _crossed, points = plan
     for e, p in points.items():
         mesh.split_edge(e, p)
     for f, (a, b) in pairs.items():
@@ -298,13 +338,13 @@ def loop_cut(mesh, seed):                      # same as LoopCutTool.on_click's 
     return len(pairs)
 M = scene.mesh                                  # a loose box at x 10..11, z 0..2 exists
 seed = M.find_edge(M.vertex_at(QVector3D(10, 0, 0)), M.vertex_at(QVector3D(10, 0, 2)))
-print(loop_cut(M, seed))                        # 4 faces cut at z = 1
+print(loop_cut(M, lc._plan(M, seed)))           # 4 faces cut at z = 1
 ```
 
 ### Vertex Editor — `vertex_editor`
 1.1 · Daniel Wagner · MIT · Reviewed
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Moves one vertex of the active mesh (click it, then click the target or type a distance); landing on another vertex welds them, and the move is rolled back if it would add open, loose or non-manifold edges or a degenerate face. **In the app:** Extensions ▸ «Editar vertice (2 cliques)» and the «Vertex» toolbar button (an interactive tool; red dots on every vertex). UI texts are Portuguese.
 
@@ -341,7 +381,7 @@ if vp.last_error: raise RuntimeError(vp.last_error)
 ### IngeTrazo Curve Tools — `ingetrazo_curve_tools`
 1.0.0 · aashishzharbade-arch · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Creates editable sampled curves (Bézier, cubic Bézier chains, B-spline, centripetal Catmull–Rom, polyline; open or closed) as wire-only groups whose recipe is stored on the group, and converts an existing edge chain into an editable polyline. **In the app:** Extensions ▸ IngeTrazo Curve Tools V1.0 and its toolbar (one button per curve type, Edit, Convert), right-click ▸ Edit Curve Tools curve; an editor window plus click/drag of control points in the viewport.
 
@@ -370,7 +410,7 @@ print(len(m.sample(d)), len(g.mesh.edges))
 ### 3D Modifiers — `igz_modify3d`
 1.0.1 · Ezequiel M Rezende · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Six point-driven tools: Mirror (plane by 3 points), Scale (ratio of two distances), Rotate (angle between two directions), Align (3 source → 3 target points), Array (step vector × N) and Polar Array (axis, N, total angle). **In the app:** the «3D Modifiers» toolbar (interactive tools: click points; no menu entries).
 
@@ -407,28 +447,29 @@ xc.XformGroupsCommand(apply, [g]).do(scene)      # new group: undone with the ca
 ```
 
 ### Weld — `weld_tool`
-1.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+1.2 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
-Joins chains of loose edges into one curve (selects with one click), optionally closing small gaps between free ends and dropping collinear points; Unweld clears the curve ids. **In the app:** Extensions ▸ Weld ▸ Weld Edges… / Unweld Edges, right-click on selected edges, and a PESI3D toolbar (Weld opens a non-modal dialog with a preview overlay).
+Joins chains of loose edges into one curve (selects with one click), optionally closing small gaps between free ends and dropping collinear points; Unweld clears the curve ids. **In the app:** Extensions ▸ Weld ▸ Weld Edges… / Unweld Edges, right-click on selected edges, and a PESI3D toolbar (Weld opens a non-modal dialog; 1.2 adds a "Live Preview" button, "Follow selection", "↻ Read selection" and Reset).
 
-**From MCP:** Full — `weld()` / `unweld()` are pure functions on a `Mesh`, no UI.
+**From MCP:** Full — `weld()` / `unweld()` are pure functions on a `Mesh`, no UI (unchanged since 1.1; only the dialog changed).
 
 - Module: `ingetrazo_plugin_weld_tool`
 - Entry points:
-  - `weld(mesh, edges, tol=0.0, collinear=False)` → `{"curves", "gaps", "points", "edges"}`: mutates `mesh` in place. `tol` (metres) closes gaps between open chain ends closer than it (two free ends meet in the middle; a free end next to attached geometry moves onto it; faces never move); `collinear=True` removes interior straight-run vertices not used by faces; every chain of ≥ 2 edges gets one new `edge.curve` id. Returns counts and the resulting edge list.
+  - `weld(mesh, edges, tol=0.0, collinear=False)` → `{"curves", "gaps", "points", "edges"}`: mutates `mesh` in place. `tol` (metres) closes gaps between open chain ends closer than it (two free ends meet in the middle; a free end next to attached geometry moves onto it; faces never move); `collinear=True` removes interior straight-run vertices not used by faces (within 0.1°); every chain of ≥ 2 edges gets one new `edge.curve` id. Returns counts and the resulting edge list.
   - `unweld(mesh, edges)` → int: clears `edge.curve` on `edges`.
   - `selected_edges(scene)` → selected `Edge`s that live in `scene.mesh`.
-  - `build_chains(edges)` → `[(edge_list, vertex_list, closed)]`; `find_gaps(edges, tol)` → `(pairs, blocked)` (preview, read-only).
-  - `run_weld(viewport, edges, tol, collinear)` / `run_unweld(viewport)` — the UI commands (own `history.execute`, status-bar messages).
-- Saved data: QSettings `plugins/weld_tool/gaps`, `plugins/weld_tool/tol_m` (default 0.01), `plugins/weld_tool/collinear`; nothing in the document.
+  - `build_chains(edges)` → `[(edge_list, vertex_list, closed)]`; `find_gaps(edges, tol)` → `(pairs, blocked)` (read-only).
+  - `run_weld(viewport, edges, tol, collinear)` / `run_unweld(viewport)` — UI commands (own `history.execute`, status-bar messages).
+- Saved data: QSettings `plugins/weld_tool/gaps`, `tol_m` (default 0.01), `collinear`, `preview`, `follow`; nothing in the document.
 - Needs: nothing extra.
 - Pitfalls:
   - Call `weld(scene.mesh, …)` directly inside `run_python` (one undo step). `run_weld` pushes its own nested undo entry.
-  - Only `scene.mesh` (the active mesh) is snapshotted by the transaction; welding a closed group's `g.mesh` is not undone by `undo`. Open the group first or build new geometry.
-  - A chain breaks at junctions (3+ edges) and where unselected geometry is attached; single-edge chains get no curve id.
-  - The edge objects change when gaps or collinear points are removed: use the returned `"edges"`, not your old list.
+  - Do not call `open_dialog` from a script: with Live Preview on (the remembered default) its timers execute and undo history commands on their own while it stays open.
+  - Only `scene.mesh` is snapshotted by the transaction; welding a closed group's `g.mesh` is not undone. Open the group first or build new geometry.
+  - Chains break at junctions (3+ edges) and where unselected geometry is attached; single-edge chains get no curve id.
+  - Edge objects change when gaps or collinear points are removed: use the returned `"edges"`.
 
 ```python
 import sys
@@ -443,7 +484,7 @@ print(r["curves"], r["gaps"], r["points"], len(r["edges"]))   # 1 1 2 2
 ### Path Select — `path_select_tool`
 1.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Selects a path of edges by clicking a few points along it: the shortest way along the edges between clicks is filled in; Select Contour grows selected edges along their chains. **In the app:** Extensions ▸ Path Select (Alt+C, an interactive tool), right-click on edges ▸ Select Contour, and a PESI3D toolbar.
 
@@ -473,13 +514,13 @@ print(len(route), sum(e.length() for e in route))
 ```
 
 ### Quadrify — `quadrify_tool`
-1.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+1.2 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Pairs triangles into four-sided faces: flat pairs become one real quad face, curved pairs keep their triangles with a soft (or hidden) diagonal; Grid Remesh rebuilds a height-field surface (terrain) as a regular grid of quads clipped to its outline. **In the app:** Extensions ▸ Quadrify ▸ Quadrify… / Grid Remesh…, its own toolbar, and the right-click menu on selected faces.
 
-**From MCP:** Full — `plan`/`apply_plan` and `grid_plan`/`apply_grid` are pure and work on any `Mesh`.
+**From MCP:** Full — `plan`/`apply_plan` and `grid_plan`/`apply_grid` are pure and work on any `Mesh` (unchanged since 1.1; 1.2 only rebuilt the dialogs).
 
 - Module: `ingetrazo_plugin_quadrify_tool` (single file)
 - Entry points:
@@ -490,7 +531,7 @@ Pairs triangles into four-sided faces: flat pairs become one real quad face, cur
   - `scope_faces(scene)` → `(selected faces of scene.mesh or all its faces, from_selection)`.
 - Saved data: none in the document. QSettings `plugins/quadrify_tool/<key>` and `…/grid_<key>` (dialog defaults).
 - Needs: manifold3d for Grid Remesh (ships with IngeTrazo).
-- Pitfalls: `open_dialog`/`open_grid_dialog` are non-modal (no message boxes) but useless headless. `run_quadrify`/`run_grid` wrap `apply_*` in their own `SnapshotImport` (nested undo step) and never report failure — call `apply_*` directly. **Undo:** run_python's snapshot covers `scene.mesh` (loose geometry, or the group currently open for editing) and added groups only; editing the mesh of an existing, closed group is NOT undone — work on `mesh`, or ask the user to open the group first. Grid Remesh needs a height field (`plan["overlap"]` True = steep/overhanging parts).
+- Pitfalls: `open_dialog`/`open_grid_dialog` are non-modal (no message boxes) but must not be opened from a script: since 1.2 their Live Preview (on by default, remembered in QSettings) executes and undoes `SnapshotImport` steps by itself on timers while open. `run_quadrify`/`run_grid` wrap `apply_*` in their own `SnapshotImport` (nested undo step) and never report failure — call `apply_*` directly. **Undo:** run_python's snapshot covers `scene.mesh` (loose geometry, or the group currently open for editing) and added groups only; editing the mesh of an existing, closed group is NOT undone — work on `mesh`, or ask the user to open the group first. Grid Remesh needs a height field (`plan["overlap"]` True = steep/overhanging parts).
 
 ```python
 import sys; m = sys.modules['ingetrazo_plugin_quadrify_tool']
@@ -507,7 +548,7 @@ if plan["error"] is None: m.apply_grid(mesh, terr, plan)
 ### Membrane — `membrane_tool`
 1.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Stretches a minimal-surface (soap-film) skin over a closed loop of edges that may be bent in 3D — tents, sails, hypars — optionally inflated or sucked in by pressure, with inner loops as mast rings/holes, open chains as cables and guide points as fixed points. **In the app:** Extensions ▸ Membrane ▸ Skin from Edges… / Edit Membrane…, its own toolbar, and the right-click menu.
 
@@ -534,7 +575,7 @@ groups.append(g); print(info["triangles"], round(info["move"], 4))
 ### JA LineaStyle — `lineas_color`
 0.1.4 · Julio Angulo · GPL-3.0-or-later · Community (catalogue id `ja_lineastyle`)
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Draws 3D lines with a display colour, pixel weight (1–12 px) and pattern (solid, dotted, dashed, long_dash, dash_dot, dash_dot_dot) in one "JA LineaStyle" group mesh; closed coplanar outlines become faces. Also restyles selected line groups/loose wires. Styles are drawn by a patched viewport pass (also in `render_image`/screenshots). **In the app:** side-tray tab «LineaStyle», Extensions ▸ «JA LineaStyle…», right-click ▸ JA LineaStyle ▸ colour / Restaurar estilo, and a line tool started from the panel.
 
@@ -565,7 +606,7 @@ print(len(s.group.mesh.edges), len(s.group.mesh.faces), md.group_color(s.group))
 ### Angle Dimension — `Angle_Dimension`
 1.0.0 · Ryszard Jurdeczka · MIT · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Measures the angle at a vertex between two arms (three clicks) and keeps it as a permanent orange overlay — two arms, an arc and a "60.0°" label — stored in the drawing. **In the app:** Extensions ▸ Draw angle dim (Ctrl+Alt+A); Extensions ▸ Angle dim tools ▸ Undo last / Delete (pick) / Clear all / About.
 
@@ -601,7 +642,7 @@ print(round(ang, 1), len(m._APP.document_data({}).get("dimensions", [])))
 ### Parametric Node Editor — `node_editor`
 1.1 · seghier · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 A visual node graph (sliders, maths, points, curves, boxes/cylinders/spheres, extrude, roofs, image sampler…) whose "IngeTrazo Output" node streams the result into the model live or bakes it as a group. **In the app:** side-tray tab "Node Editor" (can float), Extensions ▸ Node Editor ▸ Open, tool shortcut Ctrl+Shift+N.
 
@@ -631,68 +672,260 @@ for f in out.last_mesh_data.faces:
 groups.append(Group(m, name='Box from graph'))
 ```
 
-## 7. Architecture, BIM and structures
+### Parametric solids — `igz_solids`
+1.0.0 · Ezequiel M. Rezende · GPL-3.0-or-later · Community
 
-### OpenTrace BIM — `arquitetura_parametrica`
-0.12.9 · Leandro Lopes · GPL-3.0-or-later · Community (catalogue id `opentrace_bim`)
+*Live-tested in IngeTrazo 0.5.9.*
 
-*Live-tested in IngeTrazo 0.5.7.*
+14 parametric solids (box, wedge, capsule, cylinder, tube, sphere, domus, spherical wedge, cone, pyramid, geodesic sphere/football, helix, prism, torus), each inserted as its own watertight group. **In the app:** «Solids» toolbar (object name `igz_solids`) and Extensions ▸ Solids ▸ submenu; each button opens a parameter dialog, then places at the cursor (click) or at the origin.
 
-Parametric BIM: straight/curved multilayer walls with hosted openings, polygon slabs (arc edges, holes), columns and beams (simple or catalogue profiles), presets, IFC4 export/import. Bundles Layer Combinations. **In the app:** one "Parametric Architecture" side dock (wall/slab/column/beam/profile/BIM pages) plus its tools; UI text is Portuguese, translated to English at startup.
+**From MCP:** Full — every shape is a pure `build(params, origin)` returning faces; only the parameter dialog is modal.
 
-**From MCP:** Full — every element is built by pure `make_*` functions and inserted by plain `Create*/Edit*` commands whose `do(scene)` can be called directly.
-
-- Module: `ingetrazo_plugin_arquitetura_parametrica` + `.model`/`.commands` (walls), `.slab_model`/`.slab_commands`, `.column_model`/`.column_commands`, `.beam_model`/`.beam_commands`, `.bim`, `.ifc_export`, `.profile_library`, `.preset_catalog`. Load with `importlib.import_module(pkg + '.model')`.
-- Entry points (world metres, XY points as `QVector3D`; Z of the points is ignored, the values dict gives Z):
-  - `model.make_wall_segment(start, end, values)` → Group. values (all four required): `thickness`, `height`, `base` (bottom Z), `alignment` `'left'|'center'|'right'` (body grows to the LEFT of start→end for 'left'), optional `material_name`, `structure` `'simple'|'composite'` + `layers` [{name, thickness, role 'core'|'finish', material_name}], `openings` [{id, position (m along the path from start, centre), width, sill, height}] (must stay inside the wall, ≥2 cm from ends, above base, below top), `top_mode`/`top_level`/`top_offset` (bind the top to a Níveis level).
-  - `model.make_arc_wall(start, end, sagitta, values)` → curved wall; sagitta m, + = bulges left of start→end, |sagitta| ≤ 5×chord. values must ALSO contain a `length` key (any number; recomputed) or it raises.
-  - `slab_model.make_slab(world_polygon, values, edge_specs=None, openings=None)` → Group. values: `thickness`, `base_z` (bottom Z), `reference_plane` 'bottom'|'top' (REQUIRED, label only — start from `dict(slab_model.DEFAULTS, …)`), `material_name`, `structure`/`layers`. `edge_specs` per edge `{"type":"arc","sagitta":h}` or `{"type":"line"}`; `openings` [{polygon: [[x,y,0],…] WORLD XY}] fully inside, non-overlapping.
-  - `column_model.make_column(point, values)` → Group. values: `profile` 'rect'|'circle', `width`, `depth`, `diameter`, `height`, `base_z`, `rotation` (deg about Z), `anchor` 'tl'…'mc'…'br' (point = that spot of the section), `inclination` (0–85°), `inclination_azimuth`, `curvature`; or `section_type='complex'` + `profile_ref` (id from `profile_library.load_profiles()`).
-  - `beam_model.make_beam(start, end, values)` → Group. values: `width`, `height` (section), `base_z` (Z of the axis), `anchor` (default 'mc' = axis through section centre; 'tc' = top at base_z), `inclination` (±85°), `curvature` (plan sagitta), `vertical_curvature`, `rotation`, profile keys as columns.
-  - Insert: `commands.CreateWall(g).do(scene)` (`CreateWalls([..])` for several), `slab_commands.CreateSlab`, `column_commands.CreateColumn`, `beam_commands.CreateBeam` — they stamp IFC identity + materials and append to `scene.groups`.
-  - Read: `model.read_wall(g)`, `slab_model.read_slab(g)`, `column_model.read_column(g)`, `beam_model.read_beam(g)` → values dict (raise on hand-edited geometry). Edit: `commands.EditWall(scene, g, values)`, `slab_commands.EditSlab(scene, g, values=…, world_polygon=…, edge_specs=…, openings=…)`, `column_commands.EditColumn(scene, g, values)`, `beam_commands.EditBeam(scene, g, values)` (merge into the read values).
-  - `bim.scan_scene(scene)` → counts per kind; `ifc_export.export_ifc(app, Path, data=None)` writes IFC4 without dialogs (`app = ExtensionApp(viewport.window(), 'arquitetura_parametrica')`).
-- Saved data: per element `group.ext['arquitetura_parametrica']` (`kind` wall/slab/column/beam + all parameters, schema 1/3) and `group.ext['arquitetura_parametrica_derived']` (junction caps), `group.ifc` (class, global_id, predefined_type, psets). Document: `plugin_data['arquitetura_parametrica']` (IFC project/site/storeys, zones, export options), `plugin_data['layer_combinations']`. QSettings: `arquitetura_parametrica/element_presets_v2`, `arquitetura_parametrica/complex_profiles_v1`, `opentrace/bim_library_v1`, `opentrace/composition_library_v1`. Levels come from `plugin_data['niveles']['levels']` ([{name, z}]).
-- Needs: nothing extra (Níveis optional; IfcOpenShell optional for import).
-- Pitfalls: `run_python`'s snapshot undoes NEW groups but not in-place edits of EXISTING ones — create+edit in the same call with `.do(scene)` directly; to edit a pre-existing element use `viewport.history.execute(EditWall(...))` and `raise` if `viewport.history.last_error`. Do not start from `model.DEFAULTS` without dropping `base_profile`/`top_profile`/`top_xy` (its `top_profile [3,3]` overrides `height`). Columns: `stations` (from `read_column`) override `width/depth` — set `stations=None` when resizing. Walls must not be scaled/rotated off-axis or have their meshes edited (read_* raises). Junction cleanup and level-bound tops are re-derived on the next UI refresh, outside history. `scene.edit_group` must be None. The BIM page, preset import/export, profile editor and updater use dialogs — don't call their UI slots.
+- Module: `ingetrazo_plugin_igz_solids` (only re-exports `setup`), `._core`, and one submodule per shape: `.tb_box`, `.tb_capsule`, `.tb_cylinder`, `.tb_sphere`, `.tb_frustrum`, `.tb_geodesic`, `.tb_helix`, `.tb_prism`, `.tb_torus` (relative imports; get them with `importlib.import_module('ingetrazo_plugin_igz_solids.tb_box')`).
+- Entry points:
+  - `tb_<shape>.build(params: dict, origin: QVector3D)` → `(faces, cap_indices, smooth)`; faces are QVector3D loops (metres) or `(outer, [holes])`. Missing keys fall back to defaults. `origin` = base corner (box/wedge), base centre (cylinder, cone, prism, helix axis, capsule south pole), centre (sphere, geodesic, torus — these extend below `origin.z`). Keys (dialog defaults):
+    - box: `width` X 1, `length` Y 1, `height` Z 2, `shape` "box"|"wedge" · capsule: `radius` 0.5, `body_height` 1.5, `h_segments` 24, `v_segments` 8 (per cap)
+    - cylinder: `shape` "cylinder"|"tube", `outer_radius` 0.5, `inner_radius` 0.25, `segments` 24, `height` 2
+    - sphere: `shape` "sphere"|"domus"|"segment", `radius` 1, `h_segments` 24, `v_segments` 12, `angle` 45 (degrees, segment)
+    - frustrum: `shape` "cone"|"pyramid" (cone = smooth), `base_radius` 1, `top_radius` 0 (=apex), `height` 2, `sides` 24 (pyramid button uses 4)
+    - geodesic: `base` "tetra"|"octa"|"icosa"|"football", `radius` 1, `frequency` 0–4 (2), `finish` "flat"|"smooth"
+    - helix: `helix_radius` 1, `tube_radius` 0.25, `height` 2, `turns` 2, `helix_segments` 24 (per turn), `tube_segments` 12
+    - prism: `radius` 1 (circumradius), `height` 2, `sides` 6 (≥12 → smoothed) · torus: `major_radius` 0.75, `minor_radius` 0.5, `major_segments` 24, `minor_segments` 16
+  - `_core.add_solid(viewport, faces, caps=(), smooth=False, name=None)` → new `Group` (fresh mesh, `orient_outward`, soft seams except caps), via `InsertGroupCommand` (selects it; goes inside an open group).
+  - `_core.load_modules()` → the tb modules in toolbar order; `_core.module_actions(mod)` → the buttons (`name`, `icon`, preset `params`).
+- Saved data: none (plain groups named after the button, e.g. "Box", "Tube").
+- Needs: nothing extra.
+- Pitfalls: never call `run_tool` (modal `ParamDialog.exec()`) or `SolidPlacementTool` (waits for a click). `add_solid` is a nested undo step — check `viewport.history.last_error` and raise; or rebuild its five lines yourself (below) for a single step. Out-of-range values are silently clamped (tube inner ≥ outer → 0.7·outer, torus minor ≥ major → 0.2·major, helix tube ≥ helix radius → 0.4·helix).
 
 ```python
-import sys, importlib
-P = 'ingetrazo_plugin_arquitetura_parametrica'
-M, C = (importlib.import_module(P + s) for s in ('.model', '.commands'))
-SM, SC = (importlib.import_module(P + s) for s in ('.slab_model', '.slab_commands'))
-w = M.make_wall_segment(QVector3D(10, 0, 0), QVector3D(15, 0, 0),
-        {'thickness': 0.2, 'height': 2.7, 'base': 0.0, 'alignment': 'left',
-         'openings': [{'id': 'w1', 'position': 2.5, 'width': 1.2, 'sill': 0.9, 'height': 1.2}]})
-C.CreateWall(w).do(scene)
-s = SM.make_slab([QVector3D(10, 0, 0), QVector3D(15, 0, 0), QVector3D(15, 4, 0), QVector3D(10, 4, 0)],
-                 dict(SM.DEFAULTS, thickness=0.15, base_z=2.7))
-SC.CreateSlab(s).do(scene)
-print(M.read_wall(w)['length'], SM.read_slab(s)['thickness'])
+import importlib
+from core.orient import orient_outward
+tb = importlib.import_module('ingetrazo_plugin_igz_solids.tb_cylinder')
+faces, caps, smooth = tb.build({'shape': 'tube', 'outer_radius': 0.3, 'inner_radius': 0.25,
+                                'height': 2.0, 'segments': 32}, QVector3D(10, 0, 0))
+m = Mesh()
+for f in faces:
+    m.add_face(*f) if isinstance(f, tuple) else m.add_face(f)
+orient_outward(m)
+if smooth:
+    capf = {m.faces[i] for i in caps}
+    for e in m.edges:
+        if len(e.faces) == 2 and not any(f in capf for f in e.faces):
+            e.soft = True
+g = Group(mesh=m, name='Tube'); scene.groups.append(g)
+print(g.name, len(m.faces))
 ```
 
-### ArchXQ IT Lite · Architecture by phases — `archxq_it`
-0.9.5 (0.9.5-lite) · Orlando Souza · XQ · GPL-3.0-or-later · Community
+### SubD (subdivision modelling) — `subdiv`
+1.0 · Nicolas Marc · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
-Phase-driven architecture workflow (Project/levels → Terrain → Structure → Walls…): every element is a record in one JSON document and the whole building is regenerated from it (walls auto-join, mitre, T/X cuts). Lite draws levels, terrain (plot, excavations), walls (line/arc/circle) and columns; beams, slabs, footings, doors/windows, roofs, ramps, stairs, rooms and sheets are Pro (a Pro file's elements are kept and shown). **In the app:** "⏻ ArchXQ" switch at the top left of the 3D view, then its own bars over the viewport, a levels strip and a side-tray tab (library + outliner + properties); right-click menu entries on ArchXQ objects.
+Catmull-Clark subdivision modelling: a coarse control cage (kept in `group.ext["subdiv"]`) is edited with 14 tools (create, edit, crease, grow face/edge, stretch, offset, squeeze, divide, delete, close, bridge, shell) plus symmetry, join/split and convert; the group's mesh is the smoothed surface, and Finish turns it into an ordinary group or solid. **In the app:** side-tray tab «SubD» (also Extensions ▸ SubD panel); cage picking/dragging in the viewport via an overlay + pickable.
 
-**From MCP:** Partial — no parametric function API, but the document model is pure Python and the live instance's `_commit_all(doc)` rebuilds the building without dialogs; the drawing tools and element windows are UI/modal.
+**From MCP:** Full — cage, tools, smoothing and group building are pure Python (no Qt); only the panel is UI.
 
-- Module: `ingetrazo_plugin_archxq_it` (live object: `sys.modules['ingetrazo_plugin_archxq_it']._instance`, class `ui.ArchXQ`) + `.model` (doc schema, `load`, `new_walls`, `new_elements`, `elevations`, `add_floor`), `.walls` (pure wall engine, `why_not`), `.structure` (`build`, `levels_info`, `fit_column`, `why_not`), `.compat` (`wall_groups`, `kind_of`, `_rec`, `commit_build`).
+- Module: `ingetrazo_plugin_subdiv` (setup only) + pure `.edit` (Cage), `.ops` (tools), `.group` (IngeTrazo adapter), `.subdivide`, `.follow`; `.panel` (UI, loaded by setup). Relative imports only; use `importlib.import_module('ingetrazo_plugin_subdiv.edit')`.
+- Entry points (coordinates are `(x, y, z)` tuples in metres; faces are vertex-index tuples):
+  - `edit.Cage(verts, faces, creases=None, colors=None, sym=None)`; `Cage.box(size=(1,1,1), center=(0,0,0))` (the panel's Create puts the lower corner on the origin). Methods: `crease_by_angle(deg=30, sharpness=4)` → count, `set_crease(edges, s)`, `move/rotate/stretch/squeeze`, `extrude_face(fi, h)`, `inset_face`, `divide_face`, `loop_cut`, `close_hole`, `bridge`, `shell(t, "outside"|"inside"|"center")`, `orient()`, `is_closed()`, `signed_volume()`, `solid_report()` → `(ok, problems, volume)`, `bounds()`, `face_normal(fi)`, `to_dict()/from_dict()`.
+  - `ops.apply_tool(cage, tool, sel, value=0.0, axis="auto", pending=None, sym=None)` → `Result(selection, message, pending)`; edits the cage in place. `tool` ∈ `ops.SPECS` keys except "create": edit, crease, grow_face, grow_edge, stretch, inset_face, offset_edge, squeeze, divide, delete_face, close, bridge, shell. `sel` = `("v", i)`, `("e", a, b)` or `("f", i)`; `axis` "auto"|"x"|"y"|"z" (divide: "face" = that face only; shell: the mode). Raises `ValueError` (status-bar text) when the selection doesn't fit. Multi-item: `crease_items`, `grow_items`, `squeeze_items`, `bridge_two(cage, first, second, twist)`.
+  - `group.build_group(cage, levels, Group, Mesh, QVector3D, name=None, lines="cage"|"all"|"none", merge_flat=False)` → new Group (not added to the scene): triangulated smooth surface + `ext["subdiv"]` = `{cage, levels, lines, ref}`. `merge_flat=True` merges each flat patch into one polygon (what Finish uses; then set `g.ext` without `"subdiv"`).
+  - `group.read(g)` → `(cage, levels, lines)` or None; `is_subdiv(g)`; `cage_from_mesh(mesh)` → `(cage, holes_dropped)` (Convert; then `crease_by_angle`); `auto_levels(cage, budget=25000)`, `triangle_count(cage, levels)`; `join_cages(a, b)`; `carry_over(old, new)` (name, layer, ifc, uid…).
+- Saved data: `group.ext["subdiv"]` per SubD group (cage dict, levels, lines, follow ref). No document_data or QSettings.
+- Needs: nothing extra (NumPy only for the panel).
+- Pitfalls: the panel commits with its own `_Swap` command (nested undo) and reads its widgets — from a script use the pure functions and swap groups yourself (`scene.groups[i] = new` after `carry_over(old, new)`). A cage moved with the group is only followed via the panel's `StateCache` (`sys.modules['ingetrazo_plugin_subdiv.panel']._state(g)`); `read(g)` returns the cage as built. Keep cages coarse (`cage_from_mesh` refuses > 7000 faces; level 3–4 multiplies faces by 64–256). Face holes are dropped on convert.
+
+```python
+import importlib
+ed, ops, sg = (importlib.import_module('ingetrazo_plugin_subdiv.' + n) for n in ('edit', 'ops', 'group'))
+cage = ed.Cage.box((1, 1, 1), center=(10.5, 0.5, 0.5))
+top = next(i for i in range(len(cage.faces)) if cage.face_normal(i)[2] > 0.9)
+ops.apply_tool(cage, 'grow_face', ('f', top), 0.5)
+cage.crease_by_angle(30, 4)                      # keep it boxy; skip for a pebble
+g = sg.build_group(cage, 2, Group, Mesh, QVector3D, name='SubD', merge_flat=True)
+g.ext = {}                                       # finished (ordinary group); keep ext to stay editable
+scene.groups.append(g)
+print(len(g.mesh.faces))
+```
+
+### Divide Points — `divide_points`
+0.2.1 · G. Andreotti · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Places IngeTrazo guide points (snappable, saved in the .igz) along the selected lines/curves, by number of points or by distance, starting from both ends or from the middle; connected edges are joined into paths. **In the app:** Extensions ▸ Divide Points ▸ Divide Points… (modeless dialog with orange preview crosses) / Show in toolbar; right-click "Divide Points…" when edges are selected.
+
+**From MCP:** Full — pure placement maths in `geometry`, and one function that adds the guide points + registry as a single command.
+
+- Module: `ingetrazo_plugin_divide_points` + `.geometry` (pure, no Qt), `.scene_ops`, `.ui`, `.toolbar`, `.texts`. Relative imports only. Load with `importlib.import_module(P + '.geometry')`.
+- Entry points (metres, world coordinates, points as `(x, y, z)` tuples):
+  - `scene_ops.selected_paths(scene)` → list of `geometry.Path` from the Edge objects in `scene.selection` (active mesh only; faces/groups ignored). `geometry.build_paths([(key_a, key_b, (x,y,z), (x,y,z)), …])` does the same from raw segments (keys = vertex identity; branch vertices split paths; loops become closed paths). `Path(points, closed=False)`, `.length`.
+  - `geometry.place(paths, mode, *, count=None, spacing=None, origin='ends', limit=None)` → de-duplicated points. `mode` `'count'` (N points; 'ends' puts the first/last ON the ends, gap L/(N−1); 'middle' gap L/(N+1), off the ends; closed: N gaps of L/N) or `'distance'` (every `spacing` m: 'ends' walks in from both ends, remainder in the middle; 'middle' walks out from the midpoint; `limit` caps the count). Raises `geometry.PlacementError` (count 1–10000, spacing ≥ 0.1 mm). `geometry.positions(length, mode, …, closed=False)` → arc-length parameters; `geometry.point_at(path, s)` → point.
+  - `scene_ops.add_points(viewport, 'divide_points', points)` → number added (skips places that already have a guide point); adds `core.guide.Guide` points + updates the registry in ONE nested command; raises RuntimeError if the history reports an error. `scene_ops.delete_points(viewport, 'divide_points')` → removes every guide point this plugin registered (all of them, not just the last batch). `scene_ops.live_points(scene, 'divide_points')` → registered points still present.
+- Saved data: `plugin_data['divide_points']` = {version: 1, points: [[x,y,z], …]}; QSettings `plugins/divide_points/show_toolbar`.
+- Needs: nothing extra.
+- Pitfalls: guide points are not geometry — `query_model` counts won't show them; read `scene.guides` (`direction is None`). add/delete run their own `viewport.history.execute` (separate undo step inside run_python; run_python's own snapshot does NOT track `scene.guides`, so always go through `add_points`, never append Guides by hand). Points are rounded to float32 (`scene_ops.as_stored`). The dialog is modeless (`show()`), harmless but unnecessary.
+
+```python
+import importlib
+P = 'ingetrazo_plugin_divide_points'
+G, S = (importlib.import_module(P + s) for s in ('.geometry', '.scene_ops'))
+path = G.Path([(10, 0, 0), (14, 0, 0), (14, 3, 0)])          # L-shaped, 7 m
+pts = G.place([path], 'count', count=8, origin='ends')        # a point every 1 m
+print(S.add_points(viewport, 'divide_points', pts), len(S.live_points(scene, 'divide_points')))
+```
+
+### IngeTrazo Unfold — `unfold`
+1.0 · Thomas Lai · MIT · Community (catalogue id `unfold`)
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Rotates a selected group of faces about the edge they share with a reference face, so they lie flat in the reference face's plane (one hinge per operation; repeat to unfold a net). **In the app:** Extensions ▸ Unfold ▸ Unfold starts a click workflow (single-click a face or double-click for its coplanar group, then click the adjacent reference face; Esc/Space exits).
+
+**From MCP:** Full — the hinge rotation is a plain function taking the reference face; the selection comes from `scene.selection`.
+
+- Module: `ingetrazo_plugin_unfold` (single file).
 - Entry points:
-  - `X._live(X.doc())` → the current doc (dict; deleted elements dropped). Levels `doc['levels']` = [{id, name, kind 'basement'|'ground'|'floor', height m}] bottom→top; ground floor default id `'lv0'`, its floor Z = `doc['project']['ground_level']` (0 if no project).
-  - Wall record (append via `model.new_walls(doc['walls'], [rec…])`, which adds id + "Wall N"): `{'kind':'line'|'arc'|'circle', 'a':[x,y], 'b':[x,y]` (arc also `'m'`: a point on the curve; circle: `'c'`, `'r'`), `'t'` thickness m, `'align'` 'outside'|'centre'|'inside' (which face sits on the drawn line), `'side'` +1/−1 (inside on the left/right of a→b), `'height'` `'level'` (up to the next slab/level top) or m, `'base'` m above the level floor, `'level'` level id}.
-  - Column record (append via `model.new_elements(doc['structure'], [rec…])`): `{'type':'column', 'level', 'x', 'y', 'shape' 'rect'|'round', 'w', 'd' m, 'angle'` deg, `'anchor'` 'centre'|'sw'|'s'|'se'|'e'|'ne'|'n'|'nw'|'w', `'base'` m, `'height'` 'level'|m, `'fit'` bool}. `structure.fit_column(rec, level_walls)` snaps it into a wall.
-  - `X._commit_all(doc)` → rebuilds EVERY ArchXQ group from `doc` and stores it (one host undo step). Edits: `X.apply_wall(rec)`, `X.apply_element(rec)`, `X.delete_wall(id)`, `X.delete_element(id)` (each a commit + toast). Levels: `X._save_levels(doc, model.add_floor(doc['levels'], 3.0))`. Plot: `X._plot_done([[x,y],…])` (read, untested).
-- Saved data: `plugin_data['archxq']` (NOT the stem: `compat.own_key`; data under `archxq_it` is moved on read) — levels, walls, structure, openings, digs, plot, project, view/hidden state, `built` ids. Groups: `group.ext['archxq']` = {type wall|column|…, id, level, build stamps}; layers `"ArchXQ · <level name>"` and `"ArchXQ · Terrain"`. QSettings `archxq/prefs/*` (floor_height, warn_setbacks…).
-- Needs: nothing extra for walls/columns (verified building them without shapely; room/outline helpers import shapely lazily).
-- Pitfalls: `_commit_all` runs its own history command inside `run_python` → TWO undo steps (undo both; one alone leaves records whose groups are gone, which ArchXQ then treats as deleted). Check `viewport.history.last_error` after it and `raise`. Never edit ArchXQ meshes directly — every commit regenerates them (it does adopt host Move/Rotate commands via a global `History.execute` patch that runs after every command). Avoid `_walls_done`/`_struct_done` (need the UI's current level/options; walls can raise a setbacks `QMessageBox`), `edit_wall`/`edit_element`/`edit_project` (modal), `on_add_floor` without a project (opens a dialog). Do not author Pro-only record types in the Lite.
+  - `_unfold_to_reference(viewport, ref)` → True/False. Rotates every Face in `scene.selection` that lives in `scene.mesh` (except `ref`) about the first `ref` edge shared with one of them, by the angle that takes that face's normal onto `ref.normal()`. Faces are removed and rebuilt (new Face objects, attrs copied), orphan edges deleted, sheet edges made hard/visible; afterwards `scene.selection` = rebuilt faces + `ref`. On failure (no shared edge, already coplanar, degenerate) it flashes a status message and returns False — no dialog.
+  - `_coplanar_faces(scene, ref)` → list of faces in `scene.mesh` edge-connected and coplanar with `ref` (hidden edges block). What the double-click selects.
+  - `_same_plane(face_a, face_b)` → bool.
+- Saved data: none (geometry only).
+- Needs: nothing extra.
+- Pitfalls: works only on the ACTIVE mesh (`scene.mesh`: loose geometry, or the group currently open for editing); faces of closed groups are ignored. The selected faces must be edge-connected to `ref` through a real shared mesh edge. Which way the sheet swings follows the face normals (outward box normals unfold outward; inconsistent normals fold onto the reference). Nested undo: it runs `viewport.history.execute(UnfoldCommand(...))` (own undo step); it catches exceptions and returns False, so check the return value and `viewport.history.last_error`. The interactive workflow installs an event filter on the viewport — don't call `begin()` from a script.
+
+```python
+import sys
+U = sys.modules['ingetrazo_plugin_unfold']
+m = scene.mesh
+ref = m.add_face([QVector3D(10, 0, 1), QVector3D(11, 0, 1), QVector3D(11, 1, 1), QVector3D(10, 1, 1)])
+side = m.add_face([QVector3D(11, 0, 0), QVector3D(11, 1, 0), QVector3D(11, 1, 1), QVector3D(11, 0, 1)])
+scene.selection.clear(); scene.selection.update(U._coplanar_faces(scene, side))
+if not U._unfold_to_reference(viewport, ref) or viewport.history.last_error:
+    raise RuntimeError('unfold failed')
+print([[(v.x(), v.y(), v.z()) for v in f.vertices] for f in scene.selection if f is not ref])
+```
+
+### UV (UV mapping tools) — `igz-uv`
+1.0.0 · Ezequiel M. Rezende · GPL-3.0-or-later · Community (catalogue id `igz_uv`)
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Writes per-face texture UV maps (`face.attrs['texture']['uvw']`) with six projections (planar, spherical, cylindrical around Z, box, quad 0–1, tube), a fan triangulator that keeps UVs, and U/V offset/rotate/scale. Faces with no texture get the bundled UV-grid image. **In the app:** "igz-UV" toolbar, Extensions ▸ igz-UV submenu, side-tray panel "Ajuste UV" (sliders), UV Transform tool (arrow keys).
+
+**From MCP:** Full — the map commands only need faces in `scene.selection` and a viewport; the pure UV maths is reachable too.
+
+- Module: package `ingetrazo_plugin_igz-uv` only forwards; the code is a separate module loaded by path as `sys.modules['igz_uv_igz_UV']` (also `sys.modules['ingetrazo_plugin_igz-uv']._UV`). Not under the package name.
+- Entry points (all act on the Face objects in `scene.selection`; faces of a group mesh work, points are mesh-local):
+  - `planar_map(viewport)` (face-plane projection, .skp basis, uses existing texture sw/sh/rot), `spherical_map(viewport)` (around the selection centroid), `cylindrical_map(viewport)` (Z axis; V = 0 at min Z → 1 at max Z), `box_map(viewport)` (dominant plane per face, scaled by the selection's largest bbox side, so UV 0–1 spans that size), `quad_face_map(viewport)` (4-vertex faces → (0,0),(1,0),(1,1),(0,1)), `tube_map(viewport)`, `triangulate_selection(viewport)`. Each runs its own `viewport.history.execute(SnapshotImport(...))`; return None.
+  - Pure helpers: `_planar_uvs(pts, normal, sw, sh, rot)`, `_spherical_uvs(pts, center)`, `_cylindrical_uvs(pts, (zmax, zmin), center)` → [(u, v)] per point (tuples); `_ensure_uv_texture(face)` (adds grid texture if none); `_apply_uvw_to_face(face, uvw)`; `_read_uvw(face)` → 8 floats or None; `_uv_at(uvw, p)` → (u, v); `_compose_uvw(uvw, cu, cv, su, sv, cos, sin, du, dv)` (panel's block transform). Fit with `core.texture.fit_uv_affine(points, uvs)`.
+- Saved data: only face attrs — `texture` {path, sw, sh, rot, uvw} and `mat` = "igz-UV Texture" when the grid was auto-applied. No document data, no QSettings.
+- Needs: nothing extra (grid image `icons/texture_grid.jpg` inside the plugin folder; its absolute path is written into the face).
+- Pitfalls: with no faces selected every map command calls `QMessageBox.information` (modal → stalls the bridge); `quad_face_map` also does when no selected face has 4 vertices; Help… is a QMessageBox. Always fill `scene.selection` with faces first. Nested undo: each command pushes its own entry — check `viewport.history.last_error` after it and `raise`. Its `SnapshotImport` only snapshots `scene.mesh` (loose geometry) + added groups, so UV changes on faces of an EXISTING group are not reverted by undo (neither the plugin's step nor run_python's) — save `dict(f.attrs['texture'])` first if you may need to restore. `triangulate_selection` adds the triangles to `scene.mesh` (the active/loose mesh) and removes the originals from it, so use it only on loose geometry or inside the open group, never on faces of a closed group. The panel's Reload/sliders and the arrow-key tool also mutate (preview writes history per slider move) — don't drive them from scripts.
+
+```python
+import sys
+U = sys.modules['igz_uv_igz_UV']
+g = extrude([(10, 0), (12, 0), (12, 1), (10, 1)], 0.0, 0.5, name='uv test')
+scene.selection.clear(); scene.selection.update(g.mesh.faces)
+U.box_map(viewport)
+if viewport.history.last_error: raise RuntimeError(viewport.history.last_error)
+print([U._read_uvw(f) is not None for f in g.mesh.faces])
+```
+
+### Proxies — `proxy_tool`
+1.0 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Swaps the geometry of selected groups/component instances (trees, furniture, cars) for a light proxy — bounding box, convex hull, vertex cloud (crosses) or the original reduced by vertex clustering — keeping name, place, layer and instances; the full geometry is written to external `.igz` files (one per object, all together, or per layer) and swapped back with Show Originals / Show Proxies. **In the app:** Extensions ▸ Proxies ▸ Create Proxies… (non-modal dialog with Live Preview), Show Originals, Show Proxies, Select All Proxies; same entries on a «Proxies» PESI3D toolbar and in the right-click menu.
+
+**From MCP:** Full — the proxy builders are pure NumPy functions and `create_proxies` / `show_originals` / `show_proxies` run without the dialog (one swap command each); only the dialog's folder and colour pickers are modal.
+
+- Module: `ingetrazo_plugin_proxy_tool` (single file).
+- Entry points:
+  - Pure: `gather_geometry(group)` → `(P (n,3) positions in the definition frame, T (m,3) triangles, A per-triangle attrs, S loose edges)`; `face_count(group)`; `box_spec(P)`, `hull_spec(P, points=64)`, `cloud_spec(P, pct=5.0, max_points=2000)`, `source_spec(P, T, A, pct=10.0, keep_mat=True)`, `make_spec(P, T, A, params)` → spec `{P, faces, attrs, segs}`; `spec_face_count(spec)`; `build_mesh(spec, params)` → new `Mesh` (proxy colour / see-through, soft seams).
+  - `params` = `dict(DEFAULTS, …)`: `type` box|hull|cloud|source, `hull_points`, `cloud_pct`, `cloud_max`, `source_pct`, `keep_mat`, `color` [r,g,b] 0–1, `see_through`, `min_faces_on`, `min_faces`, `mode` individual|together|layer.
+  - `plan_proxies(viewport, groups, params, folder)` → plan dict (meshes, swap items, files) without touching document or disk.
+  - `create_proxies(viewport, groups, params, folder)` → `{"definitions", "objects"}` or None: writes the originals to `folder` (`<name>_<id6>.igz`, `proxies.igz` or `<layer>.igz`; an existing file is merged), then swaps. `groups` = top-level groups (`selected_groups(scene)`); instances sharing a definition share one proxy.
+  - `show_originals(viewport)` / `show_proxies(viewport)` → count; act on the SELECTED proxies, or on every proxy in the document when none is selected. `select_all_proxies(viewport)`.
+  - `proxy_info(group)` → `group.ext['proxy_tool']` or None; `read_originals(path)` → `({proxy id: Group}, materials)`.
+- Saved data: `group.ext['proxy_tool']` = `{id, file, rel, state 'proxy'|'original', faces, proxy_faces, local, name, params, serial}`; the original `.igz` files on disk; QSettings `plugins/proxy_tool/*` (dialog options, `last_folder`), `plugins/pesi3d/placed_toolbars`.
+- Needs: NumPy (bundled). Disk space for the originals.
+- Pitfalls:
+  - Writes files: ALWAYS pass an explicit absolute `folder` (the dialog's default is `<document>_proxies` next to the saved document; with an unsaved document and `folder=""` the files land in the process's current directory).
+  - `create_proxies`/`show_*` execute their own swap command → nested undo step inside `run_python`; undo does NOT delete the written `.igz` files. `show_proxies` rewrites the original file if the original was edited while shown.
+  - Never call `open_dialog` from a script (non-modal, but its Folder…/colour buttons are modal and it keeps a live preview step). Groups that are already proxies are skipped by create. A missing original file is reported only with `flash_status` (the returned count is lower).
+
+```python
+import sys
+pt = sys.modules['ingetrazo_plugin_proxy_tool']
+groups = pt.selected_groups(scene)                       # top-level groups / instances
+res = pt.create_proxies(viewport, groups, dict(pt.DEFAULTS, type='hull', hull_points=48),
+                        '/tmp/my_proxies')               # explicit folder
+print(res, [(g.name, pt.proxy_info(g)['proxy_faces']) for g in groups])
+pt.show_originals(viewport)                              # e.g. before rendering/exporting
+```
+
+## 7. Architecture, BIM and structures
+
+### OpenTrace BIM — `OpenTrace_BIM`
+0.44.0 · Leandro Lopes · GPL-3.0-or-later · Community (catalogue id `opentrace_bim`; formerly stem `arquitetura_parametrica`)
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Parametric BIM: straight/curved multilayer walls with hosted openings, parametric doors/windows, polygon slabs, columns, beams, IFC4 (IFC4.3 experimental) export/import, classification catalogues; bundles Layer Combinations. **In the app:** one "OpenTrace BIM" side dock (pages per element + BIM/project), a tool row and overlay in the viewport; UI translated to English at startup.
+
+**From MCP:** Full — elements are built by pure `make_*` functions and inserted by plain `Create*/Edit*` commands whose `do(scene)` can be called directly.
+
+- Module: `ingetrazo_plugin_OpenTrace_BIM` + `.model`/`.commands` (walls), `.door_window_commands`, `.slab_model`/`.slab_commands`, `.column_model`/`.column_commands`, `.beam_model`/`.beam_commands`, `.bim`, `.ifc_export`. Relative imports only (no bare-name self-import). Load with `importlib.import_module(P + '.model')`.
+- Entry points (world metres, XY points as `QVector3D`, Z of points ignored):
+  - `model.make_wall_segment(start, end, values)` → Group. values: `thickness`, `height`, `base` (bottom Z), `alignment` `'left'|'center'|'right'` (body to the LEFT of start→end for 'left'); optional `material_name`, `structure` 'simple'|'composite' + `layers`, `openings` [{id, position (centre, m from start), width, sill, height}], `top_mode`/`top_level`/`top_offset`.
+  - `model.make_arc_wall(start, end, sagitta, values)` → curved wall (sagitta + = bulge left, ≤ 5×chord). values must still contain a `length` key (any number, recomputed) or it raises.
+  - `door_window_commands.CreateHostedFill(scene, wall, spec)` → window/door group + wall cut in one command (wall must already be in `scene.groups`). spec: `kind` 'window'|'door', `id` (unique str), `host_id=str(wall.uid)`, `opening_id` (new id → new cut), `anchor` 'left'|'center'|'right', `position` (station of the anchor, m), `width`, `height`, `sill`; window `panes` 1–16; door `family_key` 'swing_single'|'sliding_surface'|'sliding_pocket', `hinge`, `swing` ±1. Must stay ≥ 2 cm from wall ends.
+  - `slab_model.make_slab(world_polygon, values, edge_specs=None, openings=None)` (start from `dict(slab_model.DEFAULTS, …)`; `base_z`, `thickness`; openings [{polygon: [[x,y,0],…] world}]); `column_model.make_column(point, values)` (`profile` 'rect'|'circle', `width`, `depth`, `diameter`, `height`, `base_z`, `rotation`°, `anchor` 'tl'…'mc'…'br'); `beam_model.make_beam(start, end, values)` (`width`, `height`, `base_z` = axis Z, `anchor` default 'mc').
+  - Insert: `commands.CreateWall(g).do(scene)`, `slab_commands.CreateSlab`, `column_commands.CreateColumn`, `beam_commands.CreateBeam` (stamp IFC identity, layer, classification). Read: `model.read_wall`, `slab_model.read_slab`, `column_model.read_column`, `beam_model.read_beam`. Edit: `commands.EditWall(scene, g, values)`, `EditColumn(scene, g, values)`, `EditBeam`, `EditSlab(scene, g, values=…, …)`; walls also `PaintWallBodyMaterial(scene, g, name)`.
+  - `bim.scan_scene(scene)` → {total, counts, openings…}; `bim.element_kind(g)`; `ifc_export.export_ifc(app, Path, *, data=None)` (no dialogs; `app = ExtensionApp(viewport.window(), 'OpenTrace_BIM')`).
+- Saved data: per element `group.ext['arquitetura_parametrica']` (kind + parameters; key unchanged) and `…_derived`, `group.ifc`. Document: `plugin_data['OpenTrace_BIM']` (NEW key = stem; files saved under the old stem keep `plugin_data['arquitetura_parametrica']`, which this version does not read), `plugin_data['layer_combinations']`. QSettings: `arquitetura_parametrica/element_presets_v2`, `…/complex_profiles_v1`, `opentrace/bim_library_v1`, `opentrace/composition_library_v1`, `opentrace_bim/check_updates_automatically` (default off).
+- Needs: nothing extra. Network only on user action: updater (GitHub API, auto-check off by default), Uniclass/bSDD classification downloads. IfcOpenShell optional for import.
+- **Known bug (0.44.0 on IngeTrazo 0.5.9): windows fail.** `door_window_geometry.build_fill_parts` reads `getattr(part, "ext", {}).get(...)`, but a new group's `ext` is `None` in 0.5.9, so every window placement (`CreateHostedFill` with kind 'window', and the same tool in the app) raises `AttributeError` and rolls back. Doors take another path. Walls, slabs, columns, beams and IFC export pass.
+- Pitfalls: on File ▸ New of a clean untitled doc it shows "EXPERIMENTAL · Initial project setup" — NON-modal (`show()`), so the bridge is not blocked; close it with `[d.reject() for d in viewport.window().findChildren(QDialog) if d.windowTitle().startswith('EXPERIMENTAL') and d.isVisible()]`. The Home "Configure new project", library manager, profile editor, catalogue dialogs use `exec()` — never call those slots. Create+edit in one call with `.do(scene)` directly; editing pre-existing elements needs `viewport.history.execute(...)` + `raise` on `viewport.history.last_error`. Don't start walls from `model.DEFAULTS` (its `top_profile [3,3]` overrides `height`). `scene.edit_group` must be None. Walls must not be scaled/sheared or mesh-edited (read_* raises).
+
+```python
+import importlib
+P = 'ingetrazo_plugin_OpenTrace_BIM'
+M, C, DW = (importlib.import_module(P + s) for s in ('.model', '.commands', '.door_window_commands'))
+w = M.make_wall_segment(QVector3D(10, 0, 0), QVector3D(15, 0, 0),
+        {'thickness': 0.2, 'height': 2.7, 'base': 0.0, 'alignment': 'left'})
+C.CreateWall(w).do(scene)
+# Fails in 0.44.0 on 0.5.9 (see Known bug); kept for when it is fixed:
+DW.CreateHostedFill(scene, w, {'kind': 'window', 'id': 'win-a', 'host_id': str(w.uid),
+        'opening_id': 'op-a', 'anchor': 'center', 'position': 2.5,
+        'width': 1.2, 'height': 1.2, 'sill': 0.9}).do(scene)
+print(M.read_wall(w)['length'], len(M.read_wall(w)['openings']))
+```
+
+### ArchXQ IT Lite · Architecture by phases — `archxq_it_lite`
+0.10.2 (0.10.2-lite) · Orlando Souza · XQ · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Phase-driven architecture workflow (levels → terrain → structure → walls): every element is a record in one JSON document and the whole building is regenerated from it (walls auto-join, mitre, T/X cuts). Lite draws levels, terrain (plot, excavations), walls (line/arc/circle, and since 0.10 curtain walls) and columns; beams, slabs, doors/windows, roofs, ramps, stairs are Pro (kept and shown if present). **In the app:** "⏻ ArchXQ" switch over the 3D view, then its floating bars, levels strip, grips/radial menu and a side-tray tab (library + outliner + properties); an "ArchXQ" submenu in Extensions; right-click entries on ArchXQ objects.
+
+**From MCP:** Partial — no public function API, but the document model is pure Python and the live instance's `_commit_all(doc)` rebuilds the building without dialogs; drawing tools, grips and edit windows are UI/modal.
+
+- Module: `ingetrazo_plugin_archxq_it_lite` (live object: `sys.modules[...]._instance`, class `ui.ArchXQ`; None if another ArchXQ copy is already loaded) + `.model` (`load`, `new_walls`, `new_elements`, `elevations`, `add_floor`), `.walls` (pure wall engine, `why_not`), `.structure` (`build`, `levels_info`, `fit_column`, `why_not`), `.curtain` (`DEFAULTS`), `.wallmove` (`reshape`), `.compat` (`wall_groups`, `BUILT_KINDS`, `_rec`, `commit_build`). Relative imports only (no bare `archxq_it` import).
+- Entry points:
+  - `X._live(X.doc())` → current doc (dict; elements whose groups were deleted dropped). `doc['levels']` = [{id, name, kind 'basement'|'ground'|'floor', height m}] bottom→top; ground floor Z = `doc['project']['ground_level']` (0 without project). `structure.levels_info(doc, model.elevations)[lv]` → {z0, height, slab, under}.
+  - Wall record (append via `model.new_walls(doc['walls'], [rec…])`, adds id + "Wall N"): `{'kind':'line'|'arc'|'circle', 'a':[x,y], 'b':[x,y]` (arc also `'m'` point on curve; circle `'c'`, `'r'`), `'t'` m, `'align'` 'outside'|'centre'|'inside', `'side'` ±1 (inside left/right of a→b), `'height'` 'level' or m, `'base'` m, `'level'` id}. Curtain wall: a straight wall + `'cw': True` + `curtain.DEFAULTS` (cw_s mullion spacing, cw_band, colours, cw_glass_tr…).
+  - Column record (via `model.new_elements(doc['structure'], [rec…])`): `{'type':'column', 'level', 'x', 'y', 'shape' 'rect'|'round', 'w', 'd' m, 'angle'` deg, `'anchor'` 'centre'|'sw'|…, `'base'`, `'height'` 'level'|m, `'fit'` bool}. `structure.fit_column(rec, level_walls)` snaps it into a wall.
+  - `X._commit_all(doc)` → rebuilds EVERY ArchXQ group from `doc` and stores it (plus terrain follow-up if a plot exists, joined into the same step). Edits: `X.apply_wall(rec)` (moved ends now drag joined walls via `wallmove.reshape`), `X.apply_element(rec)`, `X.delete_wall(id)`, `X.delete_element(id)`. Levels: `X._save_levels(doc, model.add_floor(doc['levels'], 3.0))`.
+- Saved data: `plugin_data['archxq']` (`compat.KEY`, not the stem; data under the loader key is moved on read) — levels, walls, structure, openings, digs, plot, project, view state, `built`, `guides_off`. Groups: `group.ext['archxq']` = {type, id, level…}; layers `"ArchXQ · <level>"`, `"ArchXQ · Terrain"`. QSettings `archxq/…`.
+- Needs: nothing extra for walls/columns; curtain walls and room outlines use the host's shapely.
+- Pitfalls: `_commit_all` runs its own history command → TWO undo steps (undo both); check `viewport.history.last_error` after it and `raise`. Never edit ArchXQ meshes directly (regenerated each commit; a global `History.execute` patch adopts host Move/Rotate). Column tops now stop 1 cm under a floor above (`TOP_GAP`). Avoid `_walls_done`/`_struct_done` (need UI state; setbacks `QMessageBox`), `edit_*` windows (modal), `on_add_floor` without a project. Startup: if another ArchXQ (Pro, old `archxq_it`) is installed, `onecopy.claim` shows a `QMessageBox.information` 1.5 s after load (via QTimer) and the Lite stays off — keep a single copy. Do not author Pro-only record types.
 
 ```python
 import sys, importlib
-P = 'ingetrazo_plugin_archxq_it'
+P = 'ingetrazo_plugin_archxq_it_lite'
 X = sys.modules[P]._instance
 M = importlib.import_module(P + '.model')
 doc = X._live(X.doc())
@@ -709,10 +942,153 @@ if viewport.history.last_error: raise RuntimeError(viewport.history.last_error)
 print(len(X.doc()['walls']), len(X.doc()['structure']))
 ```
 
+### IFC data — read and edit — `ifc_editor`
+1.0 · smokey7428 · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Edits every attribute and property set (standard `Pset_*` from buildingSMART's IFC4/IFC2X3 tables, plus your own) of an object already tagged in the BIM panel, and writes a full IFC4 file that keeps them, with `IfcOpeningElement`/`IfcRelVoidsElement`/`IfcRelFillsElement` for walls made by the `openings` plugin. **In the app:** side-tray tab «IFC» (also Window ▸ Panels), Extensions ▸ IFC fields (Ctrl+Shift+F) and Extensions ▸ Export IFC (full)…
+
+**From MCP:** Full — the record store, the edit command, the schema tables and the IFC writer are plain functions; only the panel's "add property set/property" and the export menu entry use dialogs.
+
+- Module: `ingetrazo_plugin_ifc_editor` + `.store`, `.schema` (loaded at startup) and `.writer` (lazy: `importlib.import_module('ingetrazo_plugin_ifc_editor.writer')`). Relative imports only.
+- Entry points:
+  - `store.object_key(entity)` → `"uid:<group.uid>"` for a group with `group.ifc` set, `"ifc:<id>"` for a face with `attrs["ifc"]`, else None (untagged = not editable; tag first: `group.ifc = {"class": "IfcWall", "name": "W1"}` or `core.bim.tag_group`).
+  - `store.record(scene, entity)` → `{key, class, name, schema, fields, psets, pset_types, custom, tagged}` or None; `store.records(scene)` → all tagged objects; `store.resolve(scene, key)` → `(faces, groups)`.
+  - `store.edit(viewport, key, fields=None, psets=None, pset_types=None, custom=None, schema=None, ifc_class=None, name=None)` → runs `EditIfcObject` (one undo step). Each given argument REPLACES the stored one: `fields` = `{attr: value}` (e.g. `Description`, `ObjectType`, `Tag`, `PredefinedType`); `psets` = `{pset: {prop: value}}`; `pset_types` = `{pset: {prop: "IfcLabel"…}}` for non-standard props; `custom` = names of your own psets. `ifc_class`/`name` rewrite the core BIM tag too.
+  - `schema.load("IFC4"|"IFC2X3")` → `Table`: `.has_entity(c)`, `.attributes(c)` (ordered, with `type`, `optional`, `enum`), `.predefined_types(c)`, `.psets_for(c, predefined_type=None)` → `[(name, entry)]`, `.pset(name)["properties"]`, `.resolve_kind(type)`, `.product_names()`.
+  - `writer.save(scene, path, project_name="IngeTrazo project", schema="IFC4")` → number of elements written (EVERY tagged object in the document, one storey). Raises `ValueError` if nothing is tagged. Unknown classes are written as `IfcBuildingElementProxy`; enum values not legal for the attribute become `$`.
+- Saved data: `scene.plugin_data["ifc_editor"] = {"objects": {key: {schema, fields, psets, pset_types, custom}}}`; class/name stay in `group.ifc` / `face.attrs["ifc"]`. Reads `group.ext["openings"]` (walls/hosts of the `openings` plugin) when exporting.
+- Needs: nothing extra (schema tables in `data/*.json.gz`).
+- Pitfalls:
+  - Never call `export(app)` (save-file dialog) or the panel's `_on_add_pset`/`_on_add_property` (QInputDialog / modal dialog via a timer).
+  - `store.edit` executes its own command → a nested undo step inside `run_python` (two steps; undo twice). The outer step does NOT track `plugin_data`, so the nested one is what reverts it. Check `viewport.history.last_error` right after and `raise`.
+  - Only top-level groups (`scene.groups`) and loose faces count. For groups the writer uses `group.mesh` only (read from code): a container whose geometry is all in children — e.g. the `openings` plugin's walls/doors — has no faces and is SKIPPED, and a component's `xform` is not applied.
+  - The written file is ASCII (`\X2\` escapes); output path is the caller's — use /tmp for tests.
+
+```python
+import sys, importlib
+P = 'ingetrazo_plugin_ifc_editor'
+st, sc = sys.modules[P + '.store'], sys.modules[P + '.schema']
+wr = importlib.import_module(P + '.writer')
+g = extrude([(10, 0), (14, 0), (14, 0.2), (10, 0.2)], 0, 3, name='W1')
+g.ifc = {"class": "IfcWall", "name": "W1"}
+key = st.object_key(g)
+st.edit(viewport, key, fields={"Description": "Party wall", "PredefinedType": "SOLIDWALL"},
+        psets={"Pset_WallCommon": {"IsExternal": True, "FireRating": "EI60"}})
+if viewport.history.last_error: raise RuntimeError(viewport.history.last_error)
+print(st.record(scene, g)["psets"], wr.save(scene, '/tmp/model.ifc'))
+```
+
+### Walls, doors and windows — `openings`
+1.1 · smokey7428 · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Draws parametric layered walls along a plan polyline (skins from outside in, centred on the line; regenerated from `group.ext`) and places parametric doors/windows (frame, leaf/sash, glass, handle; swing symbol on its own layer). In one of its own walls an opening is data on the wall (the wall regenerates with the hole and follows resizes/erase); in a plain face wall it cuts a hole through to the back face and reveals. Tags `IfcWall`/`IfcDoor`/`IfcWindow`; take-off per skin (m², m³, kg). **In the app:** side-tray tabs «Openings», «Walls», «Take-off»; tools «Wall» and «Door»; Extensions ▸ Doors & windows ▸ (Place…, Draw a wall…, panels, Edit…, Erase, Make plan/elevation/3D, Redraw the swing symbols); right-click ▸ Edit / Erase on an opening.
+
+**From MCP:** Full — walls, hosted and freeform openings, rebuild, erase and the take-off are plain functions run inside the plugin's `DoorCommand`; only the tools need clicks and the take-off CSV export uses a save dialog.
+
+- Module: `ingetrazo_plugin_openings` + `.walls`, `.wall_object`, `.object`, `.hosting`, `.params`, `.profiles`, `.schedule`, `.opening`, `.geometry`, `.wall_geometry` (get them with `importlib.import_module(P + '.<name>')`; relative imports).
+- Entry points (all lengths m, plan XY, Z up):
+  - `walls.defaults('spouwmuur'|'binnenwand')` → wall dict; set `path` `[[x, y], …]` (≥ 2 points), `base` (Z), `height`, `skins` `[{name, thickness, material}]` (outside→in), `openings` (data, normally left to `hosting`). `walls.validate(w)` → problems.
+  - `wall_object.create(scene, w, name=None)` → container Group (`IfcWall`, one child group per skin, materials created). `wall_object.regenerate(scene, wall, w)`; `wall_object.erase(scene, wall)`; `wall_object.wall_params(wall)`; `wall_object.quantities(w)` → `[{name, material, area, volume, mass}]`.
+  - `params.defaults('door'|'window', type)` (door `hinged`; window `fixed`|`swing`) → params dict (`width`, `height`, `sill`, `handing` left|right, `swing` in|out, `open_angle` °, section sizes, `*_mat` names, `symbol`…); `params.validate(p)`.
+  - `hosting.add(scene, wall, click, normal, p)` → opening Group in an `openings` wall: `click` = QVector3D near the wall line (picks segment + centre along it), `normal` = QVector3D of the face looked at (sets handing side). `hosting.opening_of(scene, item)` → `(wall, opening dict)`.
+  - `object.create(scene, face, click, p, name=None)` → Group cut into a LOOSE face of `scene.mesh` with a parallel back face ≤ 0.80 m behind (`OpeningError` if it does not fit).
+  - `object.rebuild(scene, item, p)` (hosted: wall hole follows); `object.erase(scene, item)` → bool (False = could not close the freeform hole); `object.opening_params(item)`.
+  - `schedule.rows(scene)` → `{walls: [per skin], openings: [...], totals}`; `schedule.csv(rows)` → CSV text.
+  - `object.DoorCommand(mutate)` / `object.run(viewport, mutate)` — one undo step capturing loose mesh, groups (children, ext, ifc, xform, layer), `plugin_data['openings']`, materials, layers.
+- Saved data: `group.ext['openings']` (wall: `kind: wall` + path/skins/openings; opening: params, frame, depth, `host` {wall uid, opening id} or `outline`); `scene.plugin_data['openings'] = {"doors": {uid: {record, symbol}}}`; layers «Doors», «Windows», «Openings — plan»; materials per skin/part.
+- Needs: nothing extra.
+- Pitfalls:
+  - Wrap every change in `viewport.history.execute(object.DoorCommand(mutate))` and check `last_error` (nested undo step; the outer `run_python` step does not track materials, plugin_data or children of existing groups). `object.run` does the same but only flashes errors and returns False.
+  - Hosted openings do not register their swing symbol: `rebuild` adds a second «Swing symbol» group and `erase` leaves the first one behind (read from code; test prints the count). Use `fixed` windows or delete stray symbols.
+  - Freeform cutting only sees top-level `scene.mesh`, not a face inside a group. `takeoff_panel` CSV export opens a save dialog; «Make plan/elevation/3D» changes saved views and layer visibility.
+
+```python
+import importlib
+P = 'ingetrazo_plugin_openings'
+om, wo, wl, hs, pm = (importlib.import_module(f'{P}.{n}') for n in ('object', 'wall_object', 'walls', 'hosting', 'params'))
+w = wl.defaults('spouwmuur'); w['path'] = [[10, 0], [14, 0]]
+out = {}
+def mutate(s):
+    out['wall'] = wo.create(s, w)
+    out['win'] = hs.add(s, out['wall'], QVector3D(12, 0, 1.5), QVector3D(0, -1, 0), pm.defaults('window', 'fixed'))
+viewport.history.execute(om.DoorCommand(mutate))
+if viewport.history.last_error: raise RuntimeError(viewport.history.last_error)
+print(out['wall'].name, out['win'].name, hs.opening_of(scene, out['win'])[1])
+```
+
+### Walls (masonry from floor plans) — `walls_tool`
+1.2 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Finds the walls, windows and doors in a flat floor plan (a Plan Import 1.2+ sheet, picked by line style, or plain edges, e.g. a DXF) and extrudes them into ONE solid group tagged IfcWall, with parapets under windows and lintels over openings. **In the app:** Extensions ▸ Walls ▸ Walls from Plan…, the same entry in the right-click menu, a PESI3D toolbar button; a non-modal dialog with live preview plus a click tool and overlay to correct the preselection.
+
+**From MCP:** Full — detection (`detect` / `styled_detect`) and `build_group` are pure; append the group yourself.
+
+- Module: `ingetrazo_plugin_walls_tool` (single file)
+- Entry points:
+  - `normalize_params(p)` / `default_params()`: `t_min`, `t_max` (wall thickness, m), `pairs` (walls drawn as two lines), `openings`, `open_min`, `open_max` (m), `height`, `sill`, `lintel` (m above the plan), `min_piece` (m²).
+  - `read_source(scene)` → `{"src", "segs", "z", "label", "key"}` from `scene.selection` (any object with `.selection`): `src` set for a Plan Import sheet (`plan_source`), else `segs = [(x0,y0,x1,y1)]` from loose edges / selected groups (`gather(scene)` → `(segs, z)`, raises `WallsError` if empty or not flat).
+  - `detect(segs, p)` → `{"walls": [{"poly" (shapely Polygon), "on", …}], "openings": [{"poly", "kind" "window"|"door", "on", "w"}], "faces", "rejected"}` (stairs and dimension chains rejected).
+  - Line styles: `source_from_record(rec, matrix=None)` (rec = `group.ext["plan_import_tool"]`) → `{"styles", "segs", "fills", "all", "sid_all", "z"}`; `guess_wall_styles(src, p)` → style ids; `styled_detect(src, chosen_ids, p)` → same dict as `detect`; `style_label(st)`.
+  - `build_group(walls_geom, openings, p, z, name)` → Group (closed mesh, `g.ifc = {"class": "IfcWall"}`); `walls_geom` = `shapely.ops.unary_union` of the `on` wall polys, `openings` = the dicts with kind window/door. `solid_layers` / `solid_faces` are the raw steps.
+  - `run_build(viewport, walls_geom, openings, p, z, select=True)` executes its own command (nested undo step; raises on `last_error`).
+- Saved data: `group.ext["walls_tool"]` (`version`, `params`, `z`, `walls` WKT, `openings` [{kind, poly WKT}]); QSettings `plugins/walls_tool/params`. Reads Niveles data `niveles` for the storey height (`level_height`).
+- Needs: shapely (+ numpy) in the app's Python — NOT in IngeTrazo 0.5.9's requirements.txt; earlier notes found it present (host's shapely). Without it the dialog warns "Shapely is missing" (QMessageBox).
+- Pitfalls: `open_dialog(app)` shows `QMessageBox.warning` on any error (and appends to `~/IngeTrazo/walls_tool.log`, `%LOCALAPPDATA%` on Windows) — never call it from MCP. Openings are heuristic (two facing jambs 0.40–4.00 m apart; window if a glass line spans the gap). The plan must lie flat; a sheet group moved/rotated after import is handled via its `xform` (`plan_source`). Texts follow the UI language (de/es/en).
+
+```python
+import sys; m = sys.modules['ingetrazo_plugin_walls_tool']
+from shapely.ops import unary_union
+p = m.normalize_params({"height": 2.5})
+s = m.read_source(scene)                       # the selected plan group / edges
+r = m.styled_detect(s["src"], m.guess_wall_styles(s["src"], p), p) if s["src"] else m.detect(s["segs"], p)
+walls = unary_union([w["poly"] for w in r["walls"] if w.get("on", True)])
+ops = [o for o in r["openings"] if o.get("on", True) and o["kind"] in ("window", "door")]
+g = m.build_group(walls, ops, p, s["z"], "Masonry"); groups.append(g); print(len(r["walls"]), [o["kind"] for o in ops])
+```
+
+### Plan Import (PDF floor plans) — `plan_import_tool`
+1.2.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Imports floor plans or whole plan sets from vector PDFs as edges at their plan scale: one group per sheet, plans stacked on their storey heights, elevations/sections stood upright, with auto crop, filters (small parts, colours, thin lines, hatches), clean-up, reference point, levels and layers. **In the app:** Extensions ▸ Plan Import… and its PESI3D toolbar button (a non-modal dialog with live preview).
+
+**From MCP:** Partial — the PDF reading, filtering and sheet-group building are pure helpers; the page list, crops, stacking/levels and layers live only in the dialog.
+
+- Module: `ingetrazo_plugin_plan_import_tool` (package; lazy relative imports of `.pdf_vectors`, `.cleanup`, `.autocrop`, `.page_view` (Qt) — get them with `importlib.import_module('ingetrazo_plugin_plan_import_tool.pdf_vectors')`)
+- Entry points:
+  - `pdf_vectors.page_count(path)`, `page_info(path)` → `[(w_pt, h_pt)]`; `extract(path, page_index=0, tol=0.1)` → `PageVectors(width, height, paths=[PdfPath(runs, stroke, fill, stroke_rgb, fill_rgb, width, evenodd)], counts)` in page points; `page_texts(path, page_index)` → `(name, scale_n, [PageText])` (reads «Erdgeschoss 1:100»); `classify_page(name, texts)` → `(kind "plan"/"site"/"elev"/"section", sides, sure)`; `suggest_levels(...)`, `story_key(name)`.
+  - `default_params()` (content/filter keys: `strokes`, `fills`, `skip_white`, `min_part_mm`, `min_width_mm`, `skip_hatch`, `skip_colours` ["#rrggbb"], `dedupe`, `gap_mm`).
+  - `collect_runs(vec, p)` → `(runs, stats)`; `clean_runs(runs, p, mpp)` → `(runs, {"merged", "closed"})`; `metres_per_point(scale_n)`; `clip_runs(runs, (x0,y0,x1,y1))`, `runs_bbox(runs)`; `autocrop.suggest_crops(w, h, runs, texts)` → crop rects (pt).
+  - `build_group(runs, mpp, name, offset=(x,y,z), axes=FLAT)` → Group of edges in metres (sheet point (x,y) → offset + x·mpp·U + y·mpp·V); `upright_placement(...)` / `layout_offsets(...)` give offset+axes for views/stacks.
+  - `style_record(vec, p, crop=None)` → line-style record (what Walls reads); `unpack_style_record(rec)`.
+  - `insert_groups(viewport, groups, select=True, extra=())` executes ONE command (nested undo step, raises on `last_error`); `layer_commands(groups, names)`, `merge_levels(old, [(name, z)])` for the Niveles data key `niveles`.
+- Saved data: each sheet group gets `group.ext["plan_import_tool"]` = style record + `version`, `page`, `scale`, `mpp`, `offset`, `axes`. With Stacked + to_levels, document data `niveles` (merged). QSettings `plugins/plan_import_tool/params`.
+- Needs: numpy (app); pypdf 6.19 vendored in `_vendor` (appended to `sys.path` only if no pypdf is importable; topology_tool ships the same copy).
+- Pitfalls: the dialog uses `QFileDialog` (open), `QInputDialog` (Measure scale), a colour `QDialog.exec()` and `QMessageBox` — never call `show_dialog` from MCP. `build_group` raises `ValueError` when nothing is left after filters. `build_group` does not set `ext` or layers — add `g.ext = {KEY: rec}` yourself if Walls should read it. Big CAD sheets: `extract`/`page_texts` can take seconds per page (120 s limit).
+
+```python
+import sys, importlib; m = sys.modules['ingetrazo_plugin_plan_import_tool']
+pv = importlib.import_module('ingetrazo_plugin_plan_import_tool.pdf_vectors')
+path = "/tmp/plan.pdf"                       # an existing vector PDF
+vec = pv.extract(path, 0); name, scale, texts = pv.page_texts(path, 0)
+p = m.default_params(); mpp = m.metres_per_point(scale or 100)
+runs, _ = m.collect_runs(vec, p); runs, _ = m.clean_runs(runs, p, mpp)
+g = m.build_group(runs, mpp, m.sheet_name(path, 1, name, scale or 100), offset=(10, 0, 0))
+rec = m.style_record(vec, p); rec.update(scale=scale or 100, mpp=mpp, offset=[10, 0, 0], axes=[list(a) for a in m.FLAT])
+g.ext = {m.KEY: rec}; groups.append(g); print(g.name, len(g.mesh.edges))
+```
+
 ### CAD2IngeTrazo · CAD plans to BIM — `cad2ingetrazo`
 3.11 · M. Tariq · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Reads DXF/DWG floor plans by layer and builds a BIM model level by level (walls, doors, windows, columns, beams, slabs, stairs, roof, plot), all regenerated from one JSON project; also makes plan/elevation/section sheets. **In the app:** side-tray tab "CAD2IngeTrazo", Extensions ▸ CAD2IngeTrazo submenu, its own toolbar (3D / Plan / Sheets / SketchUp / CAD lines), right-click on its elements.
 
@@ -740,44 +1116,83 @@ print(rep['walls'], rep['openings'], rep['skipped'][:3])
 PJ.commit(viewport, doc, {})
 ```
 
-### planArq — `planarq`
-1.0 · José Castro Basso (FADU – UDELAR) · GPL-3.0-or-later · Reviewed
+### planArq — `planArq-v1`
+1.0.1 · José Castro Basso (FADU – UDELAR) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
-Walls, pipes and steel/timber profiles (IPN, IPE, UPN, rectangular/circular tube, PGC steel framing, timber) swept along an editable polyline axis; axis and parameters are stored so the element can be re-edited. Schematic, pre-sizing only. **In the app:** side-tray tab "planArq" (Spanish UI: draw wall / pipe / profile, edit nodes, apply parameters to the selection).
+Walls, pipes and steel/timber profiles (IPN, IPE, UPN, rectangular/circular tube, PGC steel framing, timber) swept along an editable polyline axis; axis and parameters are stored so the element can be re-edited. Schematic, pre-sizing only. **In the app:** side-tray tab "planArq" (Spanish UI: draw wall / pipe / profile, edit nodes, apply parameters to the selection). 1.0.1 only changes drawing interaction (points stay on the working plane; H-pan resumes the tool) — the build and data API are unchanged.
 
 **From MCP:** Full — an element is one record dict; the plugin's `_Create` command builds it exactly as the draw tool does.
 
-- Module: `ingetrazo_plugin_planarq` (single file; the data key is `"planarq"`).
+- Module: `ingetrazo_plugin_planArq-v1` (package, everything in `__init__.py`). Data key = `app.key` = the stem **`"planArq-v1"`** (it was `"planarq"` under the old stem).
 - Entry points:
-  - `_Create(key, group, record)` — a history Command: run `viewport.history.execute(_Create('planarq', Group(name=…), record))`; builds the mesh, appends the group, stores the record, selects the group.
-  - `record` (metres, world coords, Z up): `{"type": "wall"|"pipe"|"profile", "nodes": [[x,y,z], …] (≥2, the axis), …}`; wall: `"width", "height", "alignment": 0 left / 1 centre / 2 right of the axis` (wall axis must advance in plan); pipe: `"diameter"` (outer), `"wall"` (thickness, UI uses 8 % of Ø), `"color"` (a key of `COLORS`: Celeste, Azul, Naranja, Rojo…); profile: `"profile_data": {"family", "name", "tipo_forma", "dimensions" (mm, from the catalogue)}, "rotation": 0|90`. UI also stores `"level"`, `"fixed_level"` (not used by the build).
-  - Catalogue: `PROFILE_CATALOG` (perfiles.json), `_family_data(key)` → `{"tipo_forma", "items": {name: dims}, "IMAGEN"}`; keys IPN, IPE, UPN, Tubo_Rectangular, Tubo_Circular, Steel_Framing_PGC, escuadrias_madera.
-  - `_build(group, record)` — pure: sets `group.mesh` and `group.ifc` (IfcWall / IfcPipeSegment / IfcMember with `path_length`), raises `ValueError` (Spanish text) on bad input.
+  - `_Create(key, group, record)` — a history Command: `viewport.history.execute(_Create('planArq-v1', Group(name=…), record))`; builds the mesh, appends the group, stores the record, selects the group.
+  - `record` (metres, world coords, Z up): `{"type": "wall"|"pipe"|"profile", "nodes": [[x,y,z], …] (≥2, the axis), …}`; wall: `"width", "height", "alignment": 0 left / 1 centre / 2 right`; pipe: `"diameter"` (outer), `"wall"` (thickness, UI uses 8 % of Ø), `"color"` (key of `COLORS`: Celeste, Azul, Naranja, Rojo…); profile: `"profile_data": {"family", "name", "tipo_forma", "dimensions" (mm)}, "rotation": 0|90`. UI also stores `"level"`, `"fixed_level"` (drawing aids only, not used by the build).
+  - Catalogue: `PROFILE_CATALOG` (perfiles.json), `_family_data(key)` → `{"tipo_forma", "items": {name: dims}, …}`; keys IPN, IPE, UPN, Tubo_Rectangular, Tubo_Circular, Steel_Framing_PGC, escuadrias_madera.
+  - `_build(group, record)` — pure: sets `group.mesh` and `group.ifc` (IfcWall / IfcPipeSegment / IfcMember with `path_length`), raises `ValueError` (Spanish) on bad input.
   - `_Rebuild(key, group, before, after)` / `_BatchParameters(key, [(group, before, after)])` — change an existing element's record.
-  - `_records(scene, 'planarq')` → `{group.uid: record}`.
-- Saved data: `scene.plugin_data["planarq"]["elements"]` = `{group uid: record}`.
+  - `_records(scene, key)` → `{group.uid: record}`. Live panel: `viewport.window().findChildren(P.ConstructionPanel)[0].app.key` confirms the key.
+- Saved data: `scene.plugin_data["planArq-v1"]["elements"]` = `{group uid: record}`.
 - Needs: nothing extra (perfiles.json + perfiles/*.jpg beside the plugin).
-- Pitfalls: `_Create`/`_Rebuild` are nested undo steps and fail silently — check `viewport.history.last_error` and `raise`. A bare `_build` + `groups.append` makes geometry the panel cannot edit (no record), and plugin_data written outside a command is not rolled back by `run_python`. Two coincident consecutive nodes or a 180° reversal fail the sweep. No modal dialogs in this plugin.
+- Pitfalls: Documents saved with the old stem keep their records under `plugin_data["planarq"]` — the panel no longer sees them (geometry stays, but is not re-editable) unless the data is copied to the new key. `_Create`/`_Rebuild` are nested undo steps and fail silently — check `viewport.history.last_error` and `raise`. A bare `_build` + `groups.append` makes geometry the panel cannot edit. Two coincident consecutive nodes or a 180° reversal fail the sweep. Undoing a `_Create` empties the records but leaves `plugin_data["planArq-v1"] = {"elements": {}}` behind (harmless; delete the key if you need the document exactly as before). No modal dialogs. setup installs an event filter on the viewport (H-pan resume) — harmless for scripts.
 
 ```python
 import sys
-P = sys.modules['ingetrazo_plugin_planarq']
+P = sys.modules['ingetrazo_plugin_planArq-v1']
 g = Group(name='Muro')
-viewport.history.execute(P._Create('planarq', g, {
+viewport.history.execute(P._Create('planArq-v1', g, {
     'type': 'wall', 'nodes': [[10, 0, 0], [14, 0, 0], [14, 3, 0]],
     'width': 0.20, 'height': 2.5, 'alignment': 1}))
 if viewport.history.last_error: raise RuntimeError(viewport.history.last_error)
 print(g.ifc['class'], len(g.mesh.faces))
 ```
 
+### AISC steel members — `igz_steel`
+1.1.0 · David Songer · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Places structural steel members with AISC Shapes Database v16 dimensions (2,299 shapes in 13 families: W, M, S, HP, C, MC, L, WT, MT, ST, 2L, HSS, PIPE) along any direction, rebuilds them in place (stretch/edit), tags them IfcColumn/IfcBeam/IfcMember, produces a Bill of Materials, and keeps named reference grids (rectangular/radial, with levels) that draw over the viewport and snap. **In the app:** «Steel» toolbar (Place / Stretch / Edit / Bill of Materials / Grids), Extensions ▸ Steel ▸ same entries, right-click ▸ Steel grids… / Edit steel member… / Stretch steel member.
+
+**From MCP:** Full — shape lookup, member building, insert/rebuild commands and the BOM are plain functions; the place/stretch tools need clicks; the member/BOM/grid windows are non-modal, but BOM Export CSV opens a save dialog and the grid window's Add levels… a modal dialog.
+
+- Module: `ingetrazo_plugin_igz_steel` + `._db`, `._host`, `._bom`, `._units`, `._grid`, `._grid_host`, `._core` (all loaded by setup; relative imports). Live session: `next(iter(sys.modules[P + '._core']._SESSIONS.values()))` (`.db`, `.grids`).
+- Entry points (metres, world Z up):
+  - `_db.load()` → `Database`: `.find(label)` (imperial `W12X26` or metric `W310X38.7`, case-insensitive) → `Shape` (`family`, `label`, `label_metric`, `dims` in, `weight_per_m()` kg/m) or None; `.families()`, `.shapes(family)`, `.search(text, family=None)`.
+  - `_host.new_params(label, unit_system 'imperial'|'metric', insertion 'centroid'|'top'|'bottom'|'left'|'right'|'top_left'|… (profile point ids), roll_deg, fillets bool, segments 8–96)` → params dict.
+  - `_host.member_parts(shape, params, start (x,y,z), direction (x,y,z), length)` → parts dict (mesh in local coords + `xform`, name, ifc, ext). Length < 1 mm makes a flat "profile" object. `_host.make_group(parts, layer=None)` → Group (not yet in the scene).
+  - `_host.run(viewport, _host.insert_command(group, layer=None))` → error text or None (adds the group, assigns/creates the layer). `_host.run(viewport, _host.rebuild_command(group, parts, layer=None))` — replace a member in place (stretch = same start/direction, new length).
+  - `_host.member_frame(group)` → `(start, direction, length, roll_deg)` read from the live xform; `member_params(group)`; `is_steel_group(group)`; `iter_groups(scene)` (nested too); `member_record(group, db)`.
+  - `_bom.collect(records)` → `BOM(rows[mark, label, length_m, weight_kg, layer, ifc_class, uid], summary, count, total_length_m, total_weight_kg)`; `_bom.to_csv(bom, _units.fmt_len, _units.fmt_weight)` → CSV text.
+  - Grids (pure): `_grid.parse_spacing_list("25', 3@30'", units)` → metres; `_grid.RectGrid(id, name, origin, rotation_deg, x_spacings, y_spacings, …)` → `.intersections()` `[Node(names, at)]`, `.lines()`; `_grid.dump_block(grids, active_id, units)` / `parse_block(raw)`.
+- Saved data: `group.ext['igz_steel']` = params + `start`, `direction`, `length`; document data `plugin_data['igz_steel']` = grid block `{version, grids, active_grid, units}` (write with `session.grids.save_block(block)` or `ExtensionApp(viewport.window(), 'igz_steel').set_document_data(block)` — one nested undo step).
+- Needs: nothing extra (`data/aisc_v16.json` ships with it).
+- Pitfalls:
+  - Avoid `SteelSession.insert/rebuild/open_*`, `single_selected`, `on_update` — they pop `QMessageBox` on errors or with a group open; `grids.delete` asks `QMessageBox.question`.
+  - `run(...)` executes its own command: a nested undo step inside `run_python` (two undo steps). It returns the error text; raise on it.
+  - Members are refused (by the session) inside an open group; `insert_command` would put them in the open group. Close groups first.
+  - A member is recognised by `ext['igz_steel']` + a non-None `xform`; exploding/making unique loses that.
+
+```python
+import sys
+P = 'ingetrazo_plugin_igz_steel'
+H, DB, BOM = (sys.modules[f'{P}.{n}'] for n in ('_host', '_db', '_bom'))
+db = DB.load(); shape = db.find('W12X26')
+params = H.new_params(shape.label, 'imperial', 'centroid', 0.0, True, 24)
+g = H.make_group(H.member_parts(shape, params, (10, 0, 3), (1, 0, 0), 4.0))
+err = H.run(viewport, H.insert_command(g, 'Steel'))
+if err: raise RuntimeError(err)
+bom = BOM.collect([H.member_record(x, db) for x in H.iter_groups(scene) if H.is_steel_group(x)])
+print(g.ifc['class'], bom.count, round(bom.total_weight_kg, 1))
+```
+
 ### Windowizer — `windowizer`
-0.5.7 (ships with the app) · Bane Andreev (port of Rick Wilson's Windowizer 3) · GPL-3.0-or-later · Bundled example
+0.5.9 (ships with the app) · Bane Andreev (port of Rick Wilson's Windowizer 3) · GPL-3.0-or-later · Bundled example
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
-Turns a face drawn on a wall into a parametric window: one container group (`IfcWindow`) holding a Frame and Glass panes (rows × columns), and opens the wall (through to its back face, reveals, or just a hole). Edit rebuilds it in place from its stored parameters; Erase removes it and closes the wall. **In the app:** Extensions ▸ Windowizer ▸ Windowize selected faces / Edit window… / Inherit settings / Erase window, and the same in the right-click menu.
+Turns a face drawn on a wall into a parametric window: one container group (`IfcWindow`) holding a Frame and Glass panes (rows × columns), and opens the wall (through to its back face, reveals, or just a hole). Edit rebuilds it in place from its stored parameters; Erase removes it and closes the wall. **In the app:** Extensions ▸ Windowizer ▸ Windowize selected faces / Edit window… / Inherit settings / Erase window, and the same in the right-click menu. Since 0.5.9 each window shows as «Window» in the Model Browser, with panes and size in its tooltip.
 
 **From MCP:** Full — `make_window` / `rebuild_window` / `delete_window` take a scene and plain dicts; only the menu commands open dialogs.
 
@@ -810,7 +1225,7 @@ print(out["g"].name, len(out["g"].children))                   # Window-001 3
 ### IngeTrazo Stair Maker with Railings — `make_stair`
 1.1.0 · aashishzharbade-arch · GPL-3.0-or-later · Reviewed
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Parametric straight, straight-with-landing, L- and U-shaped stairs (treads, riser boards, landings) with optional glass or steel railings, built as one container group of box solids. **In the app:** Extensions ▸ IngeTrazo Stair maker V.1 (Create / Edit selected), a floating "stair" toolbar, and right-click ▸ Edit stair… on a stair.
 
@@ -837,7 +1252,7 @@ print(n, round(r, 1), len(g.children))
 ### IngeTrazo Kitchen Maker — `ingetrazo_kitchen_maker`
 1.0.2 · aashishzharbade-arch · GPL-3.0-or-later · Reviewed
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Parametric kitchen cabinets (base, wall, tall, high, blind corners, fillers; doors, drawers, glass, open shelves, worktop) as one container group of box parts each, plus a grouped cost report. **In the app:** Extensions ▸ IngeTrazo Kitchen Maker V.1 and its toolbar (Library, Add next, Edit, Open / close, Swap hinge, Finishes, Cost report), and right-click ▸ IngeTrazo Kitchen Maker V.1 on a cabinet.
 
@@ -867,7 +1282,7 @@ print(len(a.children), m.report_rows([a, b]))
 ### IngeFloor · Wood floors — `floor_generator`
 1.0 · Hris (Krzysztof) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Generates parametric plank flooring, decking or parquet (11 patterns: running bond, herringbone 1–3x, chevron, basketweave, Versailles, mixed widths …) on a room face, with holes/columns, a mitered border, skirting boards and a material & cut report. **In the app:** Extensions ▸ Floor & Decking (Podłoga) ▸ Generate / Edit Floor… / Material & Cut Report…, a toolbar button, a tool (Ctrl+Shift+F), and the right-click menu on faces or a generated floor.
 
@@ -892,23 +1307,23 @@ groups.append(g); print(n, "planks,", round(rep["recommended_order_m2"], 2), "m2
 ```
 
 ### Roof Tiles — `roof_tile_tool`
-1.0 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+1.2.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
-Builds roofs on a footprint (20 shapes: gable, hip, half-hip, mansard, butterfly, dome …, with gable walls and a slab) and covers sloped faces with real 3D tiles (verge, ridge/hip tiles, end caps, cut tiles, flashing). **In the app:** Extensions ▸ Roof Tiles ▸ Create Roof… / Edit Roof Shape… / Cover Roof… / Edit Roof Tiles…, its own toolbar, and the right-click menu.
+Builds roofs on a footprint (20 shapes: gable, hip, half-hip, mansard, butterfly, dome …, with gable walls and a slab) and covers sloped faces with real 3D tiles (verge tiles or a flush verge finish, ridge/hip tiles, end caps, cut tiles, valley/hole flashing); whole tiles are instanced, now combined into "Tile block" components. **In the app:** Extensions ▸ Roof Tiles ▸ Create Roof… / Edit Roof Shape… / Cover Roof… / Edit Roof Tiles…, its PESI3D toolbar, and the right-click menu.
 
 **From MCP:** Full — both builders are pure functions that return a ready `Group`; append it yourself.
 
 - Module: `ingetrazo_plugin_roof_tile_tool` (single file)
 - Entry points:
-  - `make_shape(fp, p, name="Roof")` → `(Group, info)`. `fp = {"outline": [(x, y), …], "z0": z}` (m, footprint at wall-top height, any winding); `p` from `gen_default_params()` with `type` (one of `ROOF_TYPES` keys: gable, hip, halfhip, dutch, pyramid, mono, split, saltbox, mansard, gambrel, bonnet, butterfly, mroof, sawtooth, barrel, spire, dome, helm, aframe, flat), `pitch`/`pitch2` (°), `overhang`, `gable_ov`, `thick` (m), `walls`, `rotate`, `auto`/`gables` (edge indices), `eave`. `info`: faces, walls, height. Lower level: `build_roof(outline, z0, rtype, p)` → `(roof_polys, wall_polys)`.
-  - `gather(obj)` → `{"faces": [{"outer": [(x,y,z)…], "holes": […]}], "shapes": [uids]}` from `obj.selection` (any object with a `selection` set: faces or groups; takes a group's upward sloped faces).
-  - `make_roof(data, p, name="Roof Tiles")` → `(Group, info)`; `p` from `default_params()`: `preset` (`PRESET_BY_ID`: frankfurt, harz, toscana, flat, marseille, biber, monk, pantile, plain_uk, spanish), `W`, `Lmin`, `Lmax` (m), `detail` low/medium/high, `color` (name in `COLORS`), `verge`, `ridge`/`hips`/`endcaps`/`flashing` bools, gaps (m). `info`: tiles, cut, verge, ridge, hip, mono, gauge… `result_text(info)` gives a one-line summary. `estimate(data, p)` is a fast count without cutting.
-  - `materials_of(p)` → Material list; the plugin's command registers them with `core.materials.register(scene.materials, m)` (optional: faces already carry `attrs["color"]`/`["mat"]`; run_python's undo does not remove registry entries).
-- Saved data: `group.ext["roof_tile_tool"]` (shape: `kind="roof_shape"`, params, outline, z0; covering: params, faces, shape uids). QSettings `plugins/roof_tile_tool/params` and `/shape` (dialog defaults only).
+  - `make_shape(fp, p, name="Roof")` → `(Group, info)`. `fp = {"outline": [(x, y), …], "z0": z}` (m, footprint at wall-top height, any winding); `p` from `gen_default_params()`: `type` (`ROOF_TYPES` keys: gable, hip, halfhip, dutch, pyramid, mono, split, saltbox, mansard, gambrel, bonnet, butterfly, mroof, sawtooth, barrel, spire, dome, helm, aframe, flat), `pitch`/`pitch2` (°), `ratio`, `brk`, `offset`, `count`, `overhang`, `gable_ov`, `thick` (m), `walls`, `rotate`, `auto`/`gables` (edge indices), `eave` (-1 = longest). `info`: faces, walls, height, seconds. Lower level: `build_roof(outline, z0, rtype, p)` → `(roof_polys, wall_polys)`; `gather_footprint(scene)` → `fp` from selected horizontal faces / a building body.
+  - `gather(scene)` → `{"faces": [{"outer": [(x,y,z)…], "holes": […]}], "shapes": [uids]}` from `scene.selection` (any object with `.selection`: faces or groups; a group's upward sloped faces).
+  - `make_roof(data, p, name="Roof Tiles")` → `(Group, info)`; `p` from `default_params()`: `preset` (`PRESET_BY_ID`: frankfurt, harz, toscana, flat, marseille, biber, monk, pantile, plain_uk, spanish), `W`, `Lmin`, `Lmax` (m), `detail` low/medium/high, `color` (name in `COLORS`), `verge` mode (`VERGE_MODES`: tiles, mortar, board, metal, cut), `ridge`/`hips`/`mono`/`endcaps`/`flashing`/`holeflash`/`cutcomp` (blocks) bools, `endstyle`, gaps/overhangs (m), `offset`. `info`: tiles, cut, cut_shared, blocks, verge, ridge, hip, mono, gauge… `result_text(info)` = one-line summary; `estimate(data, p)` = fast count (`tiles`, `objects`, `area`, `edges`).
+  - `materials_of(p)` → Material list (the command registers them in `scene.materials`; optional, faces carry `attrs["color"]`/`["mat"]`).
+- Saved data: `group.ext["roof_tile_tool"]` (shape: `kind="roof_shape"`, params, outline, z0; covering: version, params, faces, shape uids). QSettings `plugins/roof_tile_tool/params` and `/shape` (dialog defaults only).
 - Needs: numpy and manifold3d (both ship with IngeTrazo).
-- Pitfalls: `show_*` functions open non-modal dialogs that use `QMessageBox` on errors and `QFileDialog` for custom tiles — never call them. `run_roof`/`run_shape` execute their own command (nested undo step) but raise on `history.last_error`. `tile_spec` uses `p["W"]/Lmin/Lmax`, not the preset's: copy them from `PRESET_BY_ID[id]` when changing preset. Raises `RoofError` above 40 000 pieces (`p["force"]=True` overrides). Big roofs with `detail="high"` are slow (120 s limit). Whole tiles are component instances in `g.children`.
+- Pitfalls: `show_*` open non-modal dialogs that use `QMessageBox` on errors and `QFileDialog` for custom tiles — never call them (`custom_from_scene(scene)` / `custom_from_file(path)` are the headless way to a custom tile). `run_roof`/`run_shape`/`recover_tiles` execute their own commands (nested undo steps) but raise on `history.last_error`. `tile_spec` uses `p["W"]/Lmin/Lmax`, not the preset's: copy them from `PRESET_BY_ID[id]` when changing preset. `RoofError` above 40 000 objects (`p["force"]=True`). Big roofs with `detail="high"` are slow (120 s limit). Whole tiles are components in `g.children` (single tiles and "Tile block"s).
 
 ```python
 import sys; m = sys.modules['ingetrazo_plugin_roof_tile_tool']
@@ -924,7 +1339,7 @@ groups.append(tiles); print(m.result_text(info))
 ### Levels (Niveles) — `niveles`
 0.5.7 · José Castro Basso (FADU–UDELAR) · GPL-3.0-or-later · Reviewed
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Named building levels (PB, PA, Azotea…) with a height, kept in the document; in a parallel-projection elevation/section it draws a dashed guide per level and the cursor snaps to those heights. **In the app:** side-tray tab «Levels»/«Niveles» (list + Add/Edit/Delete + "Show elevation").
 
@@ -953,7 +1368,7 @@ viewport.camera.set_view("front"); viewport.camera.perspective = False; viewport
 ### Polygon properties — `propiedades_poligono`
 0.5.7 · Rony Leonel Janampa Monago · MIT · Reviewed
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Area, perimeter, centroid, second moments (Ix, Iy, Ixy about centroid and model axes), principal moments + angle, radii of gyration and in-plane bbox of the selected coplanar faces (holes subtract). Read-only. **In the app:** Extensions ▸ Polygon properties, and right-click ▸ Polygon properties when faces are selected.
 
@@ -983,23 +1398,24 @@ print(m.format_report(props, plane, counts))
 ## 8. Terrain
 
 ### Topology (terrain) — `topology_tool`
-1.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
+1.2.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
-Builds a terrain group from contour lines (regular grid, harmonic interpolation, optional quads) or from points (Delaunay TIN), with optional skirt, closed bottom, embedded contours and a flat contour map. **In the app:** Extensions ▸ Topology ▸ Terrain from Contours… / Terrain from Points… / Edit Terrain…, its own toolbar, and the right-click menu (plus an Altitude Editor inside the dialog).
+Builds a terrain group from contour lines (regular grid, harmonic interpolation, optional quads), from points (Delaunay TIN) or from the spot heights of a vector site-plan PDF, with optional skirt, closed bottom, embedded contours and a flat contour map. **In the app:** Extensions ▸ Topology ▸ Terrain from Contours… / Terrain from Points… / Terrain from Plan… / Edit Terrain…, its own PESI3D toolbar, and the right-click menu (plus an Altitude Editor overlay inside the dialog).
 
-**From MCP:** Full — `make_terrain` is pure and returns a ready `Group`; append it yourself.
+**From MCP:** Full — `make_terrain` is pure and returns a ready `Group`; the PDF reader (`survey_pdf.read_pdf`) is headless too.
 
-- Module: `ingetrazo_plugin_topology_tool` (single file)
+- Module: `ingetrazo_plugin_topology_tool` (package; submodules loaded lazily by relative import: `.survey_pdf`, `.pdf_vectors`, `.page_view` (Qt) — get them with `importlib.import_module('ingetrazo_plugin_topology_tool.survey_pdf')`)
 - Entry points:
-  - `make_terrain(data, p, name="Terrain")` → `(Group, (faces, seconds, "triangles"|"quads"))`. `data = {"mode": "contours", "segs": [(x0,y0,z0,x1,y1,z1), …]}` (contours already at their heights, m) or `{"mode": "points", "points": [(x,y,z), …]}` (≥ 3, not collinear). `p` from `default_params()`: `res_mode` "cells"/"size", `cells` (on the long side, 10–2000), `cell_size` (m), `boundary` "hull"/"box"/"cut", `peaks` "round"/"flat", `skirt`, `skirt_depth` (m below the lowest point), `bottom`, `soft`, `quads`, `smooth_r` (m), `max_edge` (m, points: trim long rim triangles), `contours`, `map`.
-  - `gather_segments(obj)` / `gather_points(obj)` → source data from `obj.selection` (edges, faces, groups, guide points; points fall back to the document's survey points). `gather_points` returns `(points, label)`.
-  - `estimate_triangles(segs, p)` → `(n, (h, nx, ny))`; `terrain_from_contours(segs, p)` → `(V, T, C)` numpy arrays, `terrain_from_points(pts, p)` → `(V, T)` if you want the raw surface.
-  - Contour clean-up: `cs = ContourSet.from_segs(segs); cs.set_clean(simplify_m, smooth_passes, min_len_m); segs = cs.segs()`; pass `"cset": cs` in `data` to store it.
-- Saved data: `group.ext["topology_tool"]` (`mode`, params, segs or points, lines); legacy keys `terrain_tool`, `topoform`. QSettings `plugins/topology_tool/params` (dialog defaults).
-- Needs: numpy (ships with IngeTrazo).
-- Pitfalls: `show_*` open non-modal dialogs that use `QMessageBox` on errors — avoid them. `run_terrain(viewport, data, p, old=None)` executes its own command (nested undo step) but raises on `history.last_error`. Raises `TopoError` if all contours share one height or the estimate exceeds 1 000 000 triangles (`p["force"]=True` overrides). The grid is laid over the contours' XY bounds; keep `cells` modest (≤ 300) to stay well inside 120 s.
+  - `make_terrain(data, p, name="Terrain")` → `(Group, (faces, seconds, "triangles"|"quads"))`. `data = {"mode": "contours", "segs": [(x0,y0,z0,x1,y1,z1), …]}` (m, at their heights; optional `"cset"`) or `{"mode": "points", "points": [(x,y,z), …], "source": {…}}` (≥ 3, not collinear). `p` from `default_params()`: `res_mode` "cells"/"size", `cells` (long side, 10–2000), `cell_size` (m), `boundary` "hull"/"box"/"cut", `peaks` "round"/"flat", `skirt`, `skirt_depth` (m below lowest point), `bottom`, `soft`, `quads`, `smooth_r` (m), `max_edge` (m, points), `contours`, `map`.
+  - `gather_segments(scene)` / `gather_points(scene)` → source data from `scene.selection` (edges, faces, groups, guide points; points fall back to `scene.geo_points`). `gather_points` returns `(points, label)`.
+  - `estimate_triangles(segs, p)` → `(n, (h, nx, ny))`; `terrain_from_contours(segs, p)` → `(V, T, C)`, `terrain_from_points(pts, p)` → `(V, T)` numpy arrays.
+  - Clean-up: `cs = ContourSet.from_segs(segs); cs.set_clean(simplify_m, smooth_passes, min_len_m); segs = cs.segs()`.
+  - Plan PDF: `survey_pdf.read_pdf(path, page_index=0)` → `{"recs", "scale" (1:n or None), "pages", "vec", "texts", "info"}` (paper points); then `recs = survey_from_pdf(d["recs"], scale)`, `survey_apply(recs, codes_on={})` → used count, `survey_to_local(recs, origin="min", keep_height=False)` → `(pts, (e0, n0, h0))` (lowest height at z 0), `dedupe_points(pts)`.
+- Saved data: `group.ext["topology_tool"]` (`mode`, `version`, params, segs/lines or points + `source`); legacy keys `terrain_tool`, `topoform`. QSettings `plugins/topology_tool/params`, `plugins/topology_tool/survey_dir` (dialog only).
+- Needs: numpy (ships with IngeTrazo); pypdf 6.19 vendored in `_vendor` (put on `sys.path` on first PDF use; shared with plan_import_tool, whichever loads first wins).
+- Pitfalls: `show_contours/points/edit` open non-modal dialogs (`QMessageBox.warning` on errors); `show_survey(viewport, path=None)` opens a `QFileDialog` when no path is given — avoid all `show_*`. `run_terrain(viewport, data, p, old=None)` executes its own command (nested undo step) but raises on `history.last_error`. Raises `TopoError` if all contours share one height or > 1 000 000 triangles (`p["force"]=True`). Keep `cells` ≤ 300 for the 120 s limit. Spot heights only pair with a symbol within 12 mm of the text; codes like FFB/OK start unticked.
 
 ```python
 import sys, math; m = sys.modules['ingetrazo_plugin_topology_tool']
@@ -1015,7 +1431,7 @@ groups.append(g); print(n, unit)
 ### Grading — `grading_tool`
 1.1 · Pesi (pesi3d.de) · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Fills the open ground inside a closed loop of edges (which may lie at different heights) with a smooth triangulated terrain that meets every edge; inner loops become holes or fixed lines, open chains are fixed lines, guide points are spot heights. **In the app:** Extensions ▸ Grading ▸ Fill from Edges… / Edit Grading…, its own toolbar, and the right-click menu.
 
@@ -1040,12 +1456,12 @@ g, info = m.make_grading({"segs": loop(outer) + loop(inner), "points": []}, p, n
 groups.append(g); print(info["triangles"], m.slope_text(info["slope"]))
 ```
 
-## 9. Fabrication
+## 9. Fabrication and export
 
 ### Cut List — `cutlist`
 0.0.1 · Ronaldo Alves · GPL-3.0-or-later · GitHub, not catalogued (ronaldogalves/cutlist-ingetrazo @ 6a9166e)
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Builds a woodworking cut list from leaf groups/components with faces: measures each part's length × width × thickness, finds the board (core), face coverings and edge bands by material role, merges equal parts into lines with quantities, sectioned by board and thickness, flags odd parts, and exports it (CSV/text, .xlsx, clipboard) through user-named supplier profiles. Read-only on geometry. **In the app:** side-tray tab «Cut List» (Refresh, tag filter, merge toggle, Export…, click a line to highlight its parts), Extensions ▸ Cut List ▸ (Show panel / Materials… / Settings… / Export…), right-click ▸ «Cut List: part settings…».
 
@@ -1080,12 +1496,106 @@ for f in xp.files:
 print([f.name for f in xp.files], sum(len(f.rows) for f in xp.files))
 ```
 
+### Woodworking Cut List (Lista de corte para marcenaria) — `lista_corte_marcenaria`
+1.0.0 · Victor Jardim · GPL-3.0-or-later · Community (catalogue file `lista_corte.py`, installed here as `lista_corte_marcenaria.py`)
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Measures every visible group/component mesh in the model as one board (length × width × thickness in mm, largest first, in the part's own axes so rotated components are measured correctly), flags non-rectangular or odd-thickness parts, merges identical boards (0.1 mm) and exports a semicolon CSV with edge-banding counts, area and tape length. Read-only on the model. **In the app:** Extensions ▸ «Lista de corte — Marcenaria» (a modal table dialog; edge-band counts and names are edited in the table, not saved).
+
+**From MCP:** Full — `collect_pieces`, `group_pieces` and `make_csv` are pure functions; only the dialog is modal.
+
+**vs `cutlist`:** this is a small single-file, dialog-only tool: whole model only (no selection or tag filter), no materials (boards are not split by material, no face coverings), edge banding is just 0–2 long/short sides typed per line and never saved, CSV only (pt-BR headers, `,` decimals), nothing stored in the model. `cutlist` is material-aware (board/covering/band roles), works on the selection, keeps settings and per-part overrides in the document, has a side panel and supplier export profiles (CSV/xlsx/clipboard).
+
+- Module: `ingetrazo_plugin_lista_corte_marcenaria`; tool `viewport.window()._tools['plugin_lista_corte_marcenaria_ListaCorteMarcenaria']`.
+- Entry points:
+  - `collect_pieces(scene)` → `(pieces, skipped)`: one `Piece(name, qty=1, length, width, thickness, issue)` (mm) per visible, non-billboard group mesh with faces, nested placements included (name `"Parent / Child"`, transforms composed); `issue` holds "REVISAR: …" notes (non-rectangular solid → bounding box used; thickness < 0.2 or > 80 mm; shear; unmeasurable). `skipped` = counts `empty`, `hidden`, `billboard`, `loose` (loose faces are never pieces).
+  - `group_pieces(pieces)` → merged `Piece` list (dims rounded to 0.1 mm, names joined with " | ", qty summed; pieces with an issue never merge), sorted by thickness, length, width desc. `Piece.area` = qty × L × W in m².
+  - `make_csv(path, rows)` writes UTF-8-BOM `;` CSV; `rows` = `(name, qty, length_mm, width_mm, thickness_mm, bands_long 0–2, bands_short 0–2, note)`; adds total area (m²) and tape length (m) columns; text cells guarded against formula injection (`_safe_csv`).
+- Saved data: none.
+- Needs: nothing extra.
+- Pitfalls: activating the tool opens a modal `QDialog.exec()` (plus QFileDialog/QMessageBox on export) — never call `on_activate`/`_show_dialog`. Always the whole model: filter the returned pieces yourself (by name or by checking `scene.selection`). A group that has both its own faces and children yields a piece for itself and one per child. Materials are ignored. Write CSVs only where intended (e.g. /tmp).
+
+```python
+import sys
+lc = sys.modules['ingetrazo_plugin_lista_corte_marcenaria']
+pieces, skipped = lc.collect_pieces(scene)
+rows = lc.group_pieces(pieces)
+for r in rows:
+    print(r.qty, r.name, r.length, r.width, r.thickness, r.issue)
+lc.make_csv('/tmp/lista_de_corte.csv',
+            [(r.name, r.qty, r.length, r.width, r.thickness, 2, 0, r.issue) for r in rows if not r.issue])
+```
+
+### STEP export — `stepexport`
+0.3.0 · Nicolas Marc · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Exports groups (one part per top-level group/component, nested pieces folded in, world coordinates) and the loose geometry as STEP AP214 solids (`MANIFOLD_SOLID_BREP`, or open shells when not closed): planar faces with holes, faceted cylinders recognised as true `CYLINDRICAL_SURFACE`s (holes, rods, fillets), optional repair (T-junctions, small caps) and coplanar-facet merging, colours; a report (solids, open shells, volumes, cylinders found) before writing. **In the app:** Extensions ▸ Export to STEP… opens the «STEP» side-tray panel (hidden at start): content All/Selection, unit mm/cm/m, cylinders (soft edges / geometry), simplify tolerance, colours, author, «Analyse» and «Export…».
+
+**From MCP:** Full — `collect_parts` → `write_step` → (optional) `reader.read_solids` are plain functions (numpy, no Qt); `write_step(path=None)` returns the text without writing.
+
+- Module: `ingetrazo_plugin_stepexport` + `.panel`, `.collect`, `.writer`, `.model`, `.texts` (loaded by setup); `.reader` is only used by tests — get it with `importlib.import_module(P + '.reader')`.
+- Entry points:
+  - `collect.collect_parts(scene, selection_only=False)` → `[model.Part]` (visible, non-billboard top-level groups + one part for the visible loose faces; `True` = only selected groups / selected loose faces).
+  - `model.Part(name, faces, color=None, soft_edges=None)`, `model.Face(outer, holes=[], src=None)` — plain `(x, y, z)` tuples in metres, any winding: build parts without the scene.
+  - `writer.write_step(parts, path=None, scale=1000.0, unit='mm'|'cm'|'m', author='', filename='model.stp', cylinders=False, cyl_mode='soft'|'geometry', cyl_tol=1e-5, angle_max=20.0, repair_tol=None, simplify_tol=None)` → `(text, report)`; writes ASCII to `path` when given. `scale` must match `unit` (mm 1000, cm 100, m 1). The panel uses `repair_tol=1e-5` and `simplify_tol=<mm>/1000`. `report` = `{solids, shells, faces, cylinders, parts: [{name, shells: [{name, closed, volume (unit³), faces, facets, cylinders, rejected, problems}]}], notes}`.
+  - `collect.format_report(report, unit='mm', lang='en'|'fr')` → the panel's text.
+  - `reader.read_solids(text)` → `[{name, kind 'solid'|'shell', faces, volume, edge_ok, units, surfaces {PLANE, CYLINDRICAL_SURFACE}, radii}]` (verification).
+- Saved data: QSettings `ingetrazo/stepexport`: `unit`, `cylinders`, `cyl_mode`, `colors`, `author`, `simplify`, `simplify_tol`, `last_dir`. No document data.
+- Needs: NumPy (bundled with IngeTrazo).
+- Pitfalls: read-only on the model, no undo step. Do not call `StepPanel.export()` (`QFileDialog`); `StepPanel.run(path)` shows `QMessageBox.warning` if writing fails and saves the panel options to QSettings. Colours: pass `color=None` on parts to drop them (the panel's checkbox does that). Part names are unique-ified (`Name (2)`); a part with several shells writes `Name (1)`, `Name (2)`….
+
+```python
+import importlib
+P = 'ingetrazo_plugin_stepexport'
+col, wr = (importlib.import_module(f'{P}.{n}') for n in ('collect', 'writer'))
+parts = col.collect_parts(scene, selection_only=True)
+text, rep = wr.write_step(parts, path='/tmp/model.stp', scale=1000.0, unit='mm',
+                          cylinders=True, cyl_mode='soft', repair_tol=1e-5)
+print(col.format_report(rep, 'mm', 'en'))
+```
+
+### 3D PDF export — `igz_pdf3d`
+1.0.1 · David Songer · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Exports the selection (groups whole, loose faces as one «Loose geometry» node per layer) or, with nothing selected, every visible group and loose face as a one-page PDF 1.7 with an interactive U3D model (tree by layer/object, materials and textures, the exported view plus Iso/Top/Front/Back/Left/Right) and a viewport snapshot for viewers without 3D. Pure-Python writer, no dependencies. **In the app:** «3D PDF» toolbar button and Extensions ▸ Export 3D PDF… (a non-modal dialog: title, note, units, page size, Save as, Export).
+
+**From MCP:** Full — the dialog's pipeline (`collect` → `write_u3d` → `make_views` → `write_pdf`) is plain functions returning bytes; write them to a path yourself.
+
+- Module: `ingetrazo_plugin_igz_pdf3d` (+ `._core`; live `Session` in `._core._SESSIONS`) + `._collect`, `._u3d`, `._views`, `._pdf` — these load lazily (via `._dialog`, when the dialog first opens): get them with `importlib.import_module(P + '._collect')`, not `sys.modules`.
+- Entry points:
+  - `_collect.collect(scene, units, viewport=None, poster_size=None)` → plain dict (`meshes`, `materials`, `textures`, `layers`, `camera`, `bbox` in U3D space (Y-up, recentred), `counts {groups, faces}`, `fallbacks`, `poster`). `units` `'in'` (1 unit = 1 inch, default in the UI) or `'m'`. `viewport` gives the "Exported view" camera; `poster_size=(width_px, None)` also renders a JPEG snapshot of the viewport (the dialog uses 1600). Raises `_collect.NothingToExport` (only edges selected / nothing visible).
+  - `_collect.resolve(scene)` → `(groups, faces, whole)`; `describe_selection(scene)` → text.
+  - `_u3d.write_u3d(data)` → U3D bytes (starts `b'U3D\x00'`).
+  - `_views.make_views(data['camera'], data['bbox'])` → list of 3D view dicts.
+  - `_pdf.write_pdf(options, u3d_bytes, views, poster=None, poster_size=None)` → PDF bytes. `options` = `{title, note, date 'YYYY-MM-DD', units, units_label ('inches'|'metres'), page 'letter'|'a4'|'tabloid'|'archd'}` (landscape).
+- Saved data: none (no document data, no settings).
+- Needs: nothing extra. Interactive 3D only in Adobe Acrobat Reader / Bluebeam Revu; others show the snapshot.
+- Pitfalls: read-only on the model, no undo step. `collect` uses `scene.selection` — set it (and restore it) to choose what is exported. The dialog's Browse… is a `QFileDialog`; its export runs in a worker thread and writes to the "Save as" field (default `~/Untitled model.pdf` or the document's name) — do not drive the dialog. The poster calls `viewport.render_image` (slow on big models; skip with `poster_size=None`). Edges and billboards are not exported.
+
+```python
+import importlib
+P = 'ingetrazo_plugin_igz_pdf3d'
+C, U3, VW, PDF = (importlib.import_module(f'{P}.{n}') for n in ('_collect', '_u3d', '_views', '_pdf'))
+data = C.collect(scene, 'm', viewport, (1600, None))          # current selection, or all visible
+pdf = PDF.write_pdf({'title': 'Model', 'note': '', 'date': '2026-10-20', 'units': 'm',
+                     'units_label': 'metres', 'page': 'a4'},
+                    U3.write_u3d(data), VW.make_views(data['camera'], data['bbox']),
+                    data['poster'], data['poster_size'])
+open('/tmp/model.pdf', 'wb').write(pdf)
+print(data['counts'], len(pdf))
+```
+
 ## 10. Viewing, rendering and organising
 
 ### Point Cloud & 3D Gaussian Splatting — `pointcloud_splat`
 1.0.0 · archimades27 · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Loads point clouds (.ply, .las, .xyz/.pts/.txt/.csv; not .laz) and 3D Gaussian splats (.ply with f_dc/opacity/scale fields, .splat), draws them as a viewport overlay, snaps tools to points, and offers Scan-to-BIM helpers (RANSAC plane, bounding box, guide points). **In the app:** side-tray tab "Point Clouds & Splats", Extensions ▸ Point Cloud & Gaussian Splatting… (Ctrl+Shift+P); opening a .ply/.splat/.xyz/.pts/.las/.laz goes to it.
 
@@ -1118,7 +1628,7 @@ print(ds.count, ds.bounds)
 ### JA Sun · Sun and shadows — `ja_sun`
 0.1.0 · Julio Angulo · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Solar-study panel over the app's native sun/shadows: date, time, darkness, UTC offset, site (lat/lon/north), sun-path chart, day playback, named presets and "save as scene". **In the app:** side-tray tab «JA Sun», Extensions ▸ «JA Sun · Sol y sombras…» (Ctrl+Alt+S) and a one-button «JA Sun» toolbar.
 
@@ -1143,10 +1653,42 @@ d = md.solar_details(scene)
 print(round(d["elevation"], 1), round(d["azimuth"], 1), d["sunrise"], d["sunset"], md.site(scene))
 ```
 
+### igz_sunpath · Sun Path — `igz_sunpath`
+1.0.0 · Ezequiel M. Rezende · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Solar-study toolbar: toggles the app's shadows, draws a 2D sun arrow, a 3D sun vector and a solar dome (day paths for the 15th of each month + the current date, analemmas, hour labels, compass, hover cells that set the date/time) over the viewport, picks the dome centre, sets date/time and site, and exports the view as PNG. Draws only — it creates no geometry. **In the app:** «Sunpath» toolbar (object name `igz_sunpath`: Shadows on/off, Sun Arrow, Sun Vector, Sun Dome, Set Sun Tool, Set Center, Calendar, Set Location, Save PNG); Tab toggles Jan–Jun/Jul–Dec cells while the dome is on.
+
+**From MCP:** Partial — the solar maths and dome geometry are callable and the overlays can be switched without dialogs, but there are no public entry points (everything is `_private`) and the output is an overlay, not model data.
+
+- Module: `ingetrazo_plugin_igz_sunpath` (just wraps `setup`); the code is in `ingetrazo_plugin_igz_sunpath.igz_sunpath` (call it `m`).
+- Entry points:
+  - `m._solar_position(sh, latitude_deg)` → `(azimuth°, elevation°)`, azimuth clockwise from north; `sh` = anything with `month, day, hour, minute` (normally `scene.shadows`). Simple declination + equation-of-time formula; ignores longitude and time zone (clock = local solar time); within ~1° of `core.sun.solar_position(lat, 0, utc)`. For exact positions use `core.sun.solar_position(lat, lon, when_utc)` / `sun_direction(...)` instead.
+  - `m._build_dome_cache(radius_m, lat_deg, month, day)` → dict `meridians` (each `pts` [(x,y,z) m], `marcados` hour points, `nascente`/`poente` sunrise/sunset, `label`, `month`, `day`, `special`), `analemas`, `cells`, `radius`, `lat`. Centred on `m._DOME_CENTER_XYZ` (QVector3D or None = origin), rotated by `m._NORTH_ROTATION_DEG`. Cached: call `m._invalidate_dome_cache()` after changing globals. Points can be turned into real edges with `mesh.add_edge` if a 3D dome is wanted.
+  - Overlay switches (what the toolbar does, no dialogs): `for a, en, _ in m._LABELED_ACTIONS: if en == 'Sun Dome': a.setChecked(True)` ('Sun Arrow', 'Sun Vector', 'Sun Dome'). Dome size: `m._DOME_DIAGRAM_SCALE` (0.2–20, radius = 5 m × scale); centre: set `m._DOME_CENTER_XYZ = QVector3D(x, y, z)`, then `m._save_state_to_scene(mw)`, `m._invalidate_dome_cache()`, `m._repaint(mw)`.
+  - Date/time: set `scene.shadows.month/day/hour/minute` (core `ShadowSettings`) and `enabled = True`; the plugin polls it every 100 ms.
+  - `m._capture_viewport_to_png(mw, path)` → bool: viewport + overlay to PNG (transparent background if `m._EXPORT_TRANSPARENT_BG`).
+- Saved data: plain attributes on the Scene object (`scene.igz_dome_active`, `igz_sun_vector_active`, `igz_overlay_visible`, `igz_dome_diagram_scale`, `igz_dome_show_*`, `igz_export_transparent`, `igz_dome_center`) — not plugin_data, so not saved in the .igz and not undoable. Location from `scene.georef` (fallback Belo Horizonte −19.92, −43.93); north from `scene.georef.north`.
+- Needs: nothing for the maths. Set Location clicks the native base-map panel's Find (geocoding/tiles: network).
+- Pitfalls: Calendar (`_trigger_calendar`), Save PNG (`_export_screenshot`: QDialog + QFileDialog + QMessageBox) and setup's error path are modal. Set Sun Tool opens a non-modal dialog (`m._DIALOG`); Set Center waits for a viewport click. Don't press the Shadows toggle from a script (it flips `scene.shadows.enabled` and also triggers the first menu action whose text contains "shadow"/"sombra"); set `scene.shadows.enabled` instead. `_change_location` writes `georef.lat/lon` in place (no undo, UTM offsets of the datum not recomputed). Module globals and scene attributes survive undo — restore them yourself. The overlay is a child widget of the viewport; whether the bridge's `screenshot` shows it is untested.
+
+```python
+import sys, math
+m = sys.modules['ingetrazo_plugin_igz_sunpath.igz_sunpath']
+sh = scene.shadows; sh.month, sh.day, sh.hour, sh.minute, sh.enabled = 12, 21, 15, 0, True
+lat = getattr(scene.georef, 'lat', m._LATITUDE_DEG)
+az, el = m._solar_position(sh, lat)
+print(f'sun az {az:.1f} el {el:.1f}')
+for a, en, _ in m._LABELED_ACTIONS:          # show the 3D sun vector overlay
+    if en == 'Sun Vector':
+        a.setChecked(True)
+```
+
 ### Styles, Shadows and Map toolbars — `igz_tb_toolbar`
 1.5.2 · Ezequiel M. Rezende · GPL-3.0-or-later · Community (catalogue id `igz_toolbars`)
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Three toolbars: «Styles» (13 buttons that trigger the native Camera ▸ Style actions), «Shadows» (on/off, date and time sliders with sunrise/sunset marks, calendar, intensity) and «Map» (tile source + location box that drives the Terrain panel's "Find location"). **In the app:** toolbars only (no menu, panel or context entry).
 
@@ -1173,7 +1715,7 @@ import datetime; print(sh._sun_times(40.4, -3.7, datetime.date(2026, 6, 21), 2))
 ### Scenes (scene manager) — `igz_tb_scenes`
 1.0.0 · Ezequiel M. Rezende · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Camera keyframes ("scenes": eye, target, fov, hold and transition seconds) kept in the document, played as a smooth fly-through (Linear / Smooth / Catmull-Rom) and exported as PNG frames or MP4 (FFmpeg). Separate from the native saved views. **In the app:** «Scenes» toolbar (add, remove, clear, play, stop, timings, export, FFmpeg) and a «Scenes» side-tray panel (dock `igz_tb_scenes_dock`).
 
@@ -1198,10 +1740,77 @@ ctrl.adicionar_cena_atual()          # current camera as the next keyframe, save
 print(sm.sequence_duration(ctrl.cenas), sm.sample_sequence(ctrl.cenas, 1.5, "Smooth"))
 ```
 
+### Scene Automation — `scenes_play`
+0.2.1 · G. Andreotti · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Plays the model's scenes (saved views) in sequence with eased camera moves (per scene: start/stop speed, travel and stay seconds, optional sound), loops, full screen with a floating player bar (pause = Look Around, Esc stops), MP4 export, and automations saved to a .json or kept in the model. **In the app:** Extensions ▸ Scene Automation… (non-modal window `scenes_play_dialog`).
+
+**From MCP:** Full — the automation model, timing and camera interpolation are pure Python, the camera adapter and frame renderer are plain functions; only the window, file pickers and the MP4 progress use dialogs. Sounds and MP4 need FFmpeg.
+
+- Module: `ingetrazo_plugin_scenes_play` (`show_dialog(app)`, `_STATE["dialog"]`) + `.model`, `.motion`, `.player` (pure), `.host` (IngeTrazo adapter), `.media` (ffmpeg/ffprobe/ffplay), `.export`, `.ui_dialog`, `.ui_player` (UI, loaded lazily — use `importlib.import_module('ingetrazo_plugin_scenes_play.<sub>')`).
+- Entry points:
+  - `model.Entry(scene, enabled=True, start="medium", stop="medium", travel=3.0, wait=5.0, audio=None, audio_length=0.0)` — scene by NAME; start/stop ∈ "slow"|"medium"|"fast"; seconds (travel ≤ 600, wait ≤ 3600). `model.Automation(entries, loops=1)` (0 = continuous): `.played(names)`, `.single_runtime(names)`, `.total_runtime(names)` (s; None if continuous), `.to_dict()` / `Automation.from_dict(d)` (validates, raises `AutomationError`).
+  - `host.scene_names(scene)`, `host.find_view(scene, name)`, `host.build_steps(scene, entries)` → `[player.Step]` (missing scenes/sound files dropped).
+  - `player.Sequencer(steps, loops, camera, on_change=None, audio=None)`: `.start()`, `.advance(dt_s)`, `.pause()/.resume()/.stop()`, `.phase` idle|travel|wait|done, `.time`. `player.timeline(steps, loops, start_pose)` → `(duration_s, [(time, file, offset)])`. `player.NullCamera(pose)` for dry runs.
+  - `motion.Pose(target_xyz, distance, yaw, pitch, fov)`; `motion.Move.build(a, b, travel, start, stop).pose_at(t)`; `motion.interpolate(a, b, s)`.
+  - `host.Camera(window)`: `.pose()`, `.set_pose(pose)`, `.arrive(step)` (recalls the scene like a double-click in the Scenes panel: layers, style, sections too). `host.show_scene(window, view)`.
+  - `host.render_frame(viewport, width, height)` → QImage RGB32 (exact size, no overlays) — frames can be saved as PNGs to /tmp without FFmpeg.
+  - Real-time playback (async, after the script returns): `importlib.import_module(P + '.ui_player').PlaybackController(window, "Scene Automation").play(steps, loops, full_screen=False, sound=None)`; stop with `.stop()`.
+- Saved data: `scene.plugin_data["scenes_play"]` = `{"version": 1, "name", "automation": Automation.to_dict()}` (the window's Apply; one undo step). QSettings `plugins/scenes_play/{full_screen, geometry, last_dir, ffmpeg_dir}`. Automation files: JSON `{"format": "scenes_play.automation", "version": 2, ...}`.
+- Needs: FFmpeg (ffmpeg, ffprobe, ffplay) on PATH or in the folder from QSettings — only for sounds (`media.probe_length`, `SoundPlayer`) and MP4 (`export.export_video` / `media.Encoder`). Never start them from a test.
+- Pitfalls: `export.export_video` (ExportDialog.exec, QFileDialog, QProgressDialog, QMessageBox), `pick_ffmpeg_dir`, the window's Save/Load/attach sound, and `_error`/close-with-unsaved-changes are modal. `show_dialog` is non-modal but its Play with no valid scene pops a QMessageBox. Playback moves the live camera, may switch to Look Around and full screen and installs an app-wide Esc filter. Steps hold SavedView objects: they stop if the scene list changes. Adding scenes from a script: `scene.saved_views.append(SavedView(name, target=(x, y, z), distance, yaw, pitch))` (names must be unique).
+
+```python
+import importlib
+P = 'ingetrazo_plugin_scenes_play'
+md, host, pl = (importlib.import_module(f'{P}.{n}') for n in ('model', 'host', 'player'))
+names = host.scene_names(scene)
+auto = md.Automation([md.Entry(n, travel=3.0, wait=2.0) for n in names[:3]], loops=1)
+steps = host.build_steps(scene, auto.played(names))
+cam = host.Camera(viewport.window()); seq = pl.Sequencer(steps, 1, cam); seq.start()
+for k in range(int(auto.total_runtime(names) * 2)):      # 2 frames per second to /tmp
+    seq.advance(0.5)
+    host.render_frame(viewport, 640, 360).save(f'/tmp/sp_{k:03d}.png')
+```
+
+### Automation (Automação) — `automacao`
+1.0.0 · Daniel Wagner · MIT · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Per-component motion preview: each component gets ordered blocks of rotation (axis by X/Y/Z or two picked points, rpm, direction, angle per cycle, accumulate/ping-pong) or linear motion (speed, distance, direction, one-way/ping-pong/accumulate), with repetitions and a delay before each cycle; Play/reverse/step/stop animate all configured components. The animation is drawn from GPU copies only — the model's transforms are never changed. **In the app:** «Automação» toolbar (gear, object name `automacao_toolbar`), Extensions ▸ Automação… (non-modal window `automacao_dialog`, UI in Portuguese/Spanish/English).
+
+**From MCP:** Partial — the configuration is plain document data and the timeline/pose maths can be run from a script; the preview itself is viewport-only (visible in `screenshot`, not in `query_model`), and there is no export.
+
+- Module: `ingetrazo_plugin_automacao` (single `__init__.py`); live controller `viewport.window()._motor_controller` (`MotorController`).
+- Entry points:
+  - Configuration (write it directly): `ExtensionApp(window, 'automacao').set_document_data({"version": 3, "motors": {component.uid: {"blocks": [block, ...]}}})`. Start each block from `MotorController._new_block("rotation"|"linear")` (static) and set: `axis_a`, `axis_b` — points in the component's LOCAL coordinates (metres; mapped by `group.xform`); rotation: `rpm`, `direction` 1|-1, `angle_degrees` per cycle (360), `rotation_mode` "accumulate"|"ping_pong"; linear: `speed_mm_s`, `distance_mm` (along a→b), `linear_direction` 1|-1, `linear_mode` "one_way"|"ping_pong"|"accumulate"; both: `repetitions` (0 = forever), `delay_s` (pause before every cycle). Blocks of one component compose as a matrix product in block order (M = B1·B2·…, so the last block acts on the points first); rotation axes are world lines through the mapped a→b.
+  - `ctl._configured()` → `[{"group", "blocks": [runtime]}]` for components in `scene.groups` (only `group.is_component()`).
+  - `ctl._advance(dt_s, redraw=False)` steps `ctl._motors` (runtime fields `angle` °, `phase` 0–1 per length, `done`); returns False when all are done. Pose of a component: `_rotation(a, b, angle)` (module function, a/b world QVector3D) and `translate((b - a) * phase)`.
+  - Preview without the window: `ctl._ensure_preview()` (True if something is configured), `ctl._seek(t_s)` (exact time), `ctl.play_forward()` / `play_reverse()` / `pause()` (async QTimer), `ctl.stop()`.
+- Saved data: `scene.plugin_data["automacao"]` as above (older v1/v2 layouts are still read). Components are referred to by `uid`.
+- Needs: nothing extra. Uses viewport internals (`begin_groups_preview`, `_group_chunk`, GL buffers): fragile across IngeTrazo versions.
+- Pitfalls: only component instances qualify (a plain group is ignored; a test can make one with `g.xform = QMatrix4x4()` and `g.component = True`). Any document change (edit, undo, another run_python that modifies the model) stops the preview, so configure in one call and preview in a later, read-only one. Its debug log `automacao-debug.log` is appended in the plugin folder on every action and every top-level window shown (an app-wide event filter), and setup replaces `sys.excepthook`. The window's fields auto-save as nested undo steps through a 250 ms timer (`ctl._pending_save_data`); don't edit the window and the data from a script at the same time. `pick_axis` switches to a two-click tool. No modal dialogs.
+
+```python
+import sys
+from views.extension_api import ExtensionApp
+am = sys.modules['ingetrazo_plugin_automacao']
+comp = next(g for g in scene.groups if g.is_component() and g.name == 'Fan')   # an existing component
+blk = am.MotorController._new_block('rotation')
+blk.update(axis_a=[0, 0, 0], axis_b=[0, 0, 1], rpm=30.0, angle_degrees=360.0, repetitions=0)
+data = ExtensionApp(viewport.window(), 'automacao').document_data({'version': 3, 'motors': {}})
+data['motors'][comp.uid] = {'blocks': [blk]}
+ExtensionApp(viewport.window(), 'automacao').set_document_data(data)
+# next run_python (read-only): ctl = viewport.window()._motor_controller; ctl._ensure_preview(); ctl._seek(0.5)
+```
+
 ### Phasing Animator for IngeTrazo — `phasing_animator`
 1.0.0 · aashishzharbade-arch · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Construction-sequence animation: one phase track per layer (show / fade / rise from below, keep or hide after), object pose keyframes and camera keyframes, previewed on an isolated copy of the model and exported as a PNG sequence (or MP4/WebM via FFmpeg). **In the app:** Extensions ▸ Phasing Animator V1.0 and a toolbar (open, keyframes, play, export) — all in a non-modal "Studio" window with a timeline and its own preview viewport.
 
@@ -1230,7 +1839,7 @@ if viewport.history.last_error: raise RuntimeError(viewport.history.last_error)
 ### ComfyUI Viewport Renderer — `comfyui_renderer`
 1.0 · seghier · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Captures the viewport, sends it to a ComfyUI server with an API-format workflow (bundled: Flux Canny, Qwen-Image ControlNet, Anima LLLite), patches prompt/steps/denoise/cfg/seed, and shows the AI render as a viewport overlay (opacity, fit, clear on camera move). **In the app:** side-tray tab «ComfyUI» (shared panel `comfyui_render`), Extensions ▸ «ComfyUI Viewport Renderer…».
 
@@ -1259,7 +1868,7 @@ if ok and p.combo_workflows.count():
 ### Perspective Matcher — `perspective_matcher`
 1.5 · seghier · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Match the viewport camera to a photo: photo overlay, draggable red/green(/blue) vanishing-line handles and an origin pin, 2- or 3-point solver (focal, FOV, pitch/yaw, eye), photo-tab "scenes", whole-model rescaling to a known length, and projecting the photo as textures onto faces. **In the app:** side-tray tab «Perspective Match», Extensions ▸ «Perspective Matcher…» (Ctrl+Shift+M), viewport overlay with handles/tabs, right-click ▸ «📷 Project Textures from Photo».
 
@@ -1284,10 +1893,46 @@ r = m.solve_perspective(d, 1600, 1000, 1600, 1000)
 print(r.valid, r.status_msg, round(r.fov_deg, 1), round(r.focal_35mm, 1), r.eye)
 ```
 
+### Texture Library for IngeTrazo — `texture_library`
+1.0.0 · aashishzharbade-arch · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+A texture browser for a folder of images (sub-folders = categories; PBR sets shown once by their colour map), with real-world tile size per texture, painting faces/groups with it as a named material, import of images/ZIPs, and optional Poly Haven (CC0) downloads. **In the app:** side-tray tab «Textures» + Extensions ▸ Texture library… (Ctrl+Shift+T).
+
+**From MCP:** Full — the library scan and the paint step are plain functions (`scan_library`, `texture_dict`, `paint_commands`); only the panel buttons use dialogs/network.
+
+- Module: `ingetrazo_plugin_texture_library` (single file)
+- Entry points:
+  - `scan_library(root, limit=5000)` → [`Entry(name, path, category, tile, source)`]: colour/plain images under `root`; `tile` = (sw, sh) m from the `<image>.json` sidecar. `classify(stem)` → (`"color"|"other"|"plain"`, name).
+  - `texture_dict(path, sw, sh, rot=0.0)` → `{"path", "sw", "sh"[, "rot"]}` (tile size in metres, rot degrees).
+  - `paint_commands(scene, faces, groups, texture, base_name)` → (`[commands]`, `Material`): face texture + clear opacity + `attrs["mat"]` tag, registers the material (name made unique by `unique_material_name`); groups get `group.material = {"texture", "mat"}`. Run them with `viewport.history.execute(CompoundCommand(cmds))`.
+  - `selected_faces(scene)`, `selected_groups(scene)`; `read_sidecar(img)`, `save_sidecar(img, **fields)`; `import_into_library(root, category, files)` → images copied (ZIP members too); `default_root()` → `~/.local/share/IngeTrazo/texture_library`.
+  - The panel: `viewport.window().findChild(QDockWidget, 'extension_texture_library')`; its widget `._root` is the library folder in use.
+- Saved data: on faces `attrs["texture"]`, `attrs["mat"]`; `scene.materials[name]`; QSettings `("IngeTrazo", "TextureLibraryExtension")`: `root`, `unit`; sidecar `.json` beside each image.
+- Needs: the image files on disk (the face keeps the path). Poly Haven download needs network (`download_poly_asset`, `_http_get`; https polyhaven.com only).
+- Pitfalls:
+  - Don't press «Change…», «Import…» (QFileDialog/QInputDialog) or «Get online…» (dialog + network threads). `paint_with()` arms the Paint tool (UI state only).
+  - The material registry is NOT reverted by the run_python rollback: use `history.execute(CompoundCommand(cmds))` (own undo step) and check `viewport.history.last_error`.
+  - The panel's «Remember size» rewrites the image's sidecar whenever you paint.
+  - Several faces → `tools.paint._surface_commands` wraps the image across them (curved surfaces).
+
+```python
+import sys
+from core.history import CompoundCommand
+tl = sys.modules['ingetrazo_plugin_texture_library']
+f = mesh.add_face([QVector3D(10,0,0), QVector3D(12,0,0), QVector3D(12,2,0), QVector3D(10,2,0)])
+tex = tl.texture_dict('/path/to/oak_diff_1k.jpg', 0.6, 0.6)
+cmds, mat = tl.paint_commands(scene, [f], [], tex, 'Oak')
+viewport.history.execute(CompoundCommand(cmds))
+if viewport.history.last_error: raise RuntimeError(viewport.history.last_error)
+print(mat.name, f.attrs['mat'], f.attrs['texture']['sw'])
+```
+
 ### MultiView for IngeTrazo — `ingetrazo_multiview`
 1.0.5 · aashishzharbade-arch · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Replaces the single viewport with a 2×2 (or two-view) layout — Top, Perspective (the main viewport), Front, Right — sharing the document and undo history, with enlarge/restore by double Space and F4 to toggle. **In the app:** a "IngeTrazo MultiView" toolbar and Extensions ▸ IngeTrazo MultiView (Toggle, Enlarge/Restore, Zoom Extents All, Top/Perspective/Front/Right view).
 
@@ -1309,10 +1954,43 @@ print(c.is_active, c.top_vp is not None)
 # if c.is_active: c.deactivate()   # back to one viewport before screenshots
 ```
 
+### Standard Views 2 — `standard_views_2`
+1.0.0 · TB · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Two extra toolbars: «Standard Views 2» (Isometric, Top, Front, Right, Left, Back, Bottom with 48 px icons, a projection-cycle button Parallel → Perspective → 2-Point, and Smart Zoom = zoom selection, else extents) and «Theme Control» (one light/dark toggle). **In the app:** toolbars `StandardViews-2 Toolbar` and `Theme Toggler Toolbar`; no menu entries.
+
+**From MCP:** Partial — the camera helpers are plain functions taking an `ExtensionApp` (no dialogs, no model change); the theme toggle is a persistent setting. The core camera (`viewport.camera.set_view(name)`, `.set_projection(mode)`) does the same without the plugin.
+
+- Module: `ingetrazo_plugin_standard_views_2` (single file)
+- Entry points (`app = ExtensionApp(viewport.window(), 'standard_views_2')`):
+  - `trigger_camera_view(app, name)` — `name` in `"top" "bottom" "front" "back" "right" "left"` (also `"iso"`): `camera.set_view(name)` then forces `perspective = False` (parallel).
+  - `trigger_standard_isometric(app)` — yaw −45°, pitch 30°, `perspective = True` (does NOT clear `two_point`).
+  - `cycle_projection_modes(app)` — parallel → perspective → two_point → parallel (`camera.projection_mode()` tells where you are).
+  - `trigger_smart_zoom_combo(app, window)` — triggers `window._act_zoom_selection` if `scene.selection` is non-empty, else `window._act_zoom_extents`.
+  - `toggle_global_preferences_theme(window)` — flips light/dark via `views.theme.save_theme` + `apply_theme`.
+- Saved data: none of its own. The theme toggle writes the app's general setting (theme) — persistent.
+- Needs: nothing extra.
+- Pitfalls:
+  - Every helper swallows exceptions and only `print`s them (no error raised): check the camera afterwards.
+  - Camera changes are not undo steps (the run_python rollback does not restore the view); save/restore yaw, pitch, target, distance, perspective, two_point yourself if the view matters.
+  - Do not call `toggle_global_preferences_theme` unless asked — it changes the user's saved theme.
+  - An overlay redraws the toolbar icons on every paint when theme/projection change (harmless).
+
+```python
+import sys, math
+from views.extension_api import ExtensionApp
+sv = sys.modules['ingetrazo_plugin_standard_views_2']
+app = ExtensionApp(viewport.window(), 'standard_views_2')
+sv.trigger_camera_view(app, 'front')
+print(viewport.camera.projection_mode(), round(math.degrees(viewport.camera.yaw)))   # parallel -90
+```
+
 ### JA Tree · Model outliner — `outliner`
 0.1.0 · Julio Angulo · GPL-3.0-or-later · Community (catalogue id `ja_tree`)
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Tree of groups, components (nested) and section planes: search/filter, rename, hide/show, assign tag, delete, zoom to, open for editing, and drag to re-parent/reorder keeping world position. **In the app:** side-tray tab «Tree», Extensions ▸ «JA Tree…» (Ctrl+Alt+O), viewport right-click ▸ «Localizar en JA Tree».
 
@@ -1341,7 +2019,7 @@ print([(n.name, n.kind, n.parent_key) for n in nodes.values()], md.bounds_of(nod
 ### JA Units · Units — `ja_units`
 0.1.0 · Julio Angulo · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Sets the document's length unit (mm, cm, m, in, ft, ft-in, fractional in/ft-in) and precision through the host's native unit engine — display and typed input only, geometry stays in metres; plus built-in/personal presets and two toolbar preset slots. **In the app:** side-tray tab «Units/Unidades», a «JA Units» toolbar, and entries in the Extensions menu.
 
@@ -1368,7 +2046,7 @@ print(ctrl.summary(), units.fmt_len(1.2345))
 ### Organize Toolbar — `organize_toolbar`
 1.2 · seghier · GPL-3.0-or-later · Community
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 A toolbar and an Extensions ▸ Organize submenu with six buttons for existing core commands: Hide, Unhide Last, Unhide All, Reverse Faces, Make Group, Explode Group. **In the app:** «Organize» toolbar + Extensions ▸ Organize ▸ …
 
@@ -1399,7 +2077,7 @@ viewport.history.execute(HideCommand([g], hidden=True)) # hide: its own undo ste
 ### Isolate / Unisolate Selection — `isolate_unisolate_selection_toolbar`
 no version · sudhanva-gh · GPL-3.0 (repository licence; none in the file) · GitHub, not catalogued (sudhanva-gh/isolate-unisolate-ingetrazo-plugin @ ad4405f)
 
-*Live-tested in IngeTrazo 0.5.7.*
+*Live-tested in IngeTrazo 0.5.9.*
 
 Hides every group/component except the selected ones, remembering the previous visibility; Unisolate restores it. **In the app:** Extensions ▸ Isolate Selected (Ctrl+Shift+Alt+I) / Unisolate / Restore (Ctrl+Shift+Alt+U), the same two in Extensions ▸ Isolate Selection ▸, and an «Isolate Selection» toolbar.
 
@@ -1425,4 +2103,96 @@ selection.clear(); selection.add(g)
 iso.isolate_selected(viewport)                       # everything else hidden
 print(scene.plugin_data.get('isolate_selection_v2', {}).get('active'))
 # … later, in another call:  iso.unisolate(viewport)
+```
+
+## 11. Interface
+
+### Coloured Tools + Space (UI Colores + Space) — `ui_colores_space`
+0.1.0 · sanask24 · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Recolours the toolbar icons by tool family (drawing blue, modelling orange, sections violet, solids red, annotation green, navigation turquoise, materials magenta…, lighter hues in the dark theme) and makes **Space** open the native command search (Select moves from Space to V if V is free). **In the app:** Extensions ▸ UI Colores + Space ▸ two check items (colours, Space) + «Buscar comandos…».
+
+**From MCP:** UI only — it changes icons and keyboard shortcuts; nothing touches the model. An AI can read its state, or get a family colour / icon for a tool key.
+
+- Module: `ingetrazo_plugin_ui_colores_space` (+ `.controller`, `.host`, `.icons`; relative imports only)
+- Entry points (read-only use recommended):
+  - `viewport.window()._ui_colores_space_controller` — the `Controller` (QObject): `.colors_enabled`, `.search_enabled` (bools), `.original_icons` {action: QIcon}, `.shortcut_changes` {action: (before, applied)}, `.color_action` / `.space_action` (the checkable menu items).
+  - `icons.icon_category(key)` → family name (`"drawing"`, `"modeling"`, …, `"utility"` default); `icons.icon_color(key)` → QColor for the current palette; `icons.tool_icon(key)` → coloured QIcon (null for an unknown key). Keys are the window's `_icon_actions` keys (`"line"`, `"pushpull"`, `"orbit"`…).
+  - `host.search_action(win)` (objectName `command_search`), `host.select_action(win)`, `host.icon_actions(win)` → [(action, key)].
+- Saved data: QSettings (app default org/app) `ui_colores_space/colors`, `ui_colores_space/space` (bools). No document data.
+- Needs: nothing extra (IngeTrazo ≥ 0.5.7 internals `_icon_actions`, `_tool_actions["select"]`).
+- Pitfalls:
+  - `Controller.set_colors(b)` / `set_search(b)` (and toggling the menu items) WRITE those QSettings and rebind shortcuts — do not call from a script unless asked; if you do, restore the previous value.
+  - It keeps its own copy of the icon renderer: with `custom_icons` installed, whichever refreshes last wins (palette change / new child widget re-triggers this one).
+  - No dialogs; «Buscar comandos…» only triggers the native search popup (keyboard UI, useless over MCP).
+
+```python
+import sys
+ic = sys.modules['ingetrazo_plugin_ui_colores_space.icons']
+c = viewport.window()._ui_colores_space_controller
+print(c.colors_enabled, c.search_enabled, ic.icon_category('pushpull'), ic.icon_color('line').name())
+```
+
+### Custom Icons · SVG icon themes — `custom_icons`
+1.1 · APBureauEtude · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Replaces toolbar icons and 3D-view tool cursors with the user's SVG files: one folder per theme with a `mapping.json` (icon/cursor key → SVG path), paired by drag and drop on a local web page. **In the app:** Extensions ▸ Custom icons ▸ Choose icons… (opens the browser page) / Open icons folder / Reload icons.
+
+**From MCP:** Partial — no model effect; the theme files and `reload(window)` are plain Python (no dialogs), but the pairing editor is a browser page.
+
+- Module: `ingetrazo_plugin_custom_icons` (+ `.editor`, the page's HTTP server; relative import)
+- Entry points:
+  - `root_folder()` → Path `~/.local/share/ingetrazo/custom_icons` (beside the user plugins dir); `custom_dir()` (`Icônes custom/`), `originals_dir()` (`Icônes originales/`).
+  - `themes()` → [theme folder names]; `active_theme()` → name or None (IngeTrazo's own); `save_theme(name|None)` writes `settings.json`.
+  - `theme_pool(theme)` → {relative path: Path} of its SVGs; `load_mapping(theme, pool)` / `save_mapping(theme, {"icons": {key: path}, "cursors": {slot: path}})`; `suggested_mapping(paths)` pairs by file name (`line.svg` → icon `line`, `cursors/line.svg` → cursor `line`, `cursors/tape+.svg` → guide-mode slot).
+  - `reload(window=None)` → int (icons + cursors replaced): re-exports the originals, re-reads the active theme, redraws when given the window.
+  - Pure renderers: `render_svg(bytes, size_px, ink=None)` → QImage|None, `svg_icon(bytes, ink=None)` → QIcon|None, `svg_cursor(bytes, kind, plus=False, dpr=1.0)` → QCursor|None, `hotspot_kind(slot)` → `"tip"|"point"|"drip"|(fx, fy)`, `find_hotspot(QImage, kind)` → (x, y). `currentColor` in an SVG = interface ink.
+- Saved data: files under `root_folder()` (`settings.json`, each theme's `mapping.json`, `Sauvegardes/`, `Importées/`); no QSettings, no document data.
+- Needs: QtSvg (falls back to Qt's svg image plugin). The editor binds an HTTP server on 127.0.0.1 (random port, token URL).
+- Pitfalls:
+  - `setup()` monkey-patches `views.icons.tool_icon` / `tool_cursor` in EVERY loaded module (`custom_icons_original` attribute holds IngeTrazo's).
+  - Never call `open_editor` (starts the server + opens a browser), `open_custom_folder` / `_open_folder` (file manager).
+  - `reload()` writes one SVG per built-in icon into `Icônes originales/` and `save_theme`/`save_mapping` change what the user sees at next start: only on request.
+  - With `ui_colores_space` also installed, the two fight over toolbar icons (last refresh wins).
+
+```python
+import sys
+ci = sys.modules['ingetrazo_plugin_custom_icons']
+svg = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path d="M8 40 L40 8" stroke="currentColor" stroke-width="3"/></svg>'
+print(ci.themes(), ci.active_theme(), ci.svg_icon(svg) is not None, ci.hotspot_kind('line'))
+```
+
+### Display Scale for IngeTrazo — `display_scale`
+1.2.0 · aashishzharbade-arch · GPL-3.0-or-later · Community
+
+*Live-tested in IngeTrazo 0.5.9.*
+
+Scales the interface (font, toolbar/tab/list icon sizes) live with presets that make the screen lay out like 720p/1080p/2K/4K, optional restart at a true `QT_SCALE_FACTOR`, and a Focus Mode that hides every visible side panel. **In the app:** «Display Scale» toolbar (monitor icon → dialog) + Extensions ▸ Display Scale... / Display Scale: Smaller (more space) / Display Scale: Larger / Focus Mode (hide panels) / Display Scale: Toolbar.
+
+**From MCP:** UI only — it changes the user's interface size and settings, not the model. An AI can read the saved scale, compute workspace sizes, or use Focus Mode for a bigger viewport (restore afterwards).
+
+- Module: `ingetrazo_plugin_display_scale` (single file; Tool keys `plugin_display_scale_DisplayScaleTool`, `…_ScaleSmallerTool`, `…_ScaleLargerTool`, `…_FocusModeTool`, `…_DisplayScaleToolbarTool`)
+- Entry points (pure / harmless):
+  - `screen_info(win=None)` → (physical_w_px, physical_h_px, os_dpr).
+  - `scale_for_workspace(virtual_w, phys_w, os_dpr)` → UI scale (clamped 0.40–3.00); `workspace_for_scale(scale, phys_w, phys_h, os_dpr)` → (w, h) px the UI lays out like.
+  - `restart_command(scale)` → (argv list, env dict) — only BUILDS the command; `permanent_command(scale)` → shell text.
+  - `LIVE` (`_Live`): `.scale`, `.icon`, `.text`, `.active`; `LIVE.apply(scale, icon, text)` / `LIVE.reset()` change the running UI (not saved).
+  - `toggle_focus(win)` → True when panels were hidden; call again to restore them (`_focus["hidden"]` holds the docks).
+- Saved data: QSettings `("ingetrazo-plugins", "display_scale")`: `scale`, `icon`, `text` (floats), `auto` ("true"/"false"; re-applied at every start).
+- Needs: nothing extra; «Restart at true scale» relaunches the app process (`subprocess.Popen`).
+- Pitfalls:
+  - Never activate `DisplayScaleTool` or the toolbar button (modal `_Dialog.exec()`); never call `restart_at_scale` (QMessageBox, closes the window, starts a new process).
+  - `ScaleSmallerTool` / `ScaleLargerTool` (`_step`) WRITE QSettings `scale` and rescale the live UI.
+  - `LIVE.apply` installs an app-wide event filter and changes the app font; leave it alone unless asked, and `LIVE.apply(old values)` afterwards.
+  - Module import schedules timers (2.2 s auto-apply, 2.7 s toolbar) — re-importing the file would apply the saved scale again.
+
+```python
+import sys
+ds = sys.modules['ingetrazo_plugin_display_scale']
+w, h, dpr = ds.screen_info(viewport.window())
+print(w, h, dpr, ds.workspace_for_scale(ds.LIVE.scale, w, h, dpr))
 ```
