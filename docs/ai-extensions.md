@@ -887,7 +887,7 @@ Parametric BIM: straight/curved multilayer walls with hosted openings, parametri
   - `bim.scan_scene(scene)` → {total, counts, openings…}; `bim.element_kind(g)`; `ifc_export.export_ifc(app, Path, *, data=None)` (no dialogs; `app = ExtensionApp(viewport.window(), 'OpenTrace_BIM')`).
 - Saved data: per element `group.ext['arquitetura_parametrica']` (kind + parameters; key unchanged) and `…_derived`, `group.ifc`. Document: `plugin_data['OpenTrace_BIM']` (NEW key = stem; files saved under the old stem keep `plugin_data['arquitetura_parametrica']`, which this version does not read), `plugin_data['layer_combinations']`. QSettings: `arquitetura_parametrica/element_presets_v2`, `…/complex_profiles_v1`, `opentrace/bim_library_v1`, `opentrace/composition_library_v1`, `opentrace_bim/check_updates_automatically` (default off).
 - Needs: nothing extra. Network only on user action: updater (GitHub API, auto-check off by default), Uniclass/bSDD classification downloads. IfcOpenShell optional for import.
-- **Known bug (0.44.0 on IngeTrazo 0.5.9): windows fail.** `door_window_geometry.build_fill_parts` reads `getattr(part, "ext", {}).get(...)`, but a new group's `ext` is `None` in 0.5.9, so every window placement (`CreateHostedFill` with kind 'window', and the same tool in the app) raises `AttributeError` and rolls back. Doors take another path. Walls, slabs, columns, beams and IFC export pass.
+- **Known bug (0.44.0): windows fail.** `door_window_geometry.build_fill_parts` reads `getattr(part, "ext", {}).get(...)`, but a group's `ext` is `None` until an extension writes to it (IngeTrazo's default, at least since 0.5.7), so every window placement (`CreateHostedFill` with kind 'window', and the same tool in the app) raises `AttributeError` and rolls back. A plugin bug, not an app change; fix: `(getattr(part, "ext", None) or {}).get(...)`. Doors take another path. Walls, slabs, columns, beams and IFC export pass.
 - Pitfalls: on File ▸ New of a clean untitled doc it shows "EXPERIMENTAL · Initial project setup" — NON-modal (`show()`), so the bridge is not blocked; close it with `[d.reject() for d in viewport.window().findChildren(QDialog) if d.windowTitle().startswith('EXPERIMENTAL') and d.isVisible()]`. The Home "Configure new project", library manager, profile editor, catalogue dialogs use `exec()` — never call those slots. Create+edit in one call with `.do(scene)` directly; editing pre-existing elements needs `viewport.history.execute(...)` + `raise` on `viewport.history.last_error`. Don't start walls from `model.DEFAULTS` (its `top_profile [3,3]` overrides `height`). `scene.edit_group` must be None. Walls must not be scaled/sheared or mesh-edited (read_* raises).
 
 ```python
@@ -897,7 +897,7 @@ M, C, DW = (importlib.import_module(P + s) for s in ('.model', '.commands', '.do
 w = M.make_wall_segment(QVector3D(10, 0, 0), QVector3D(15, 0, 0),
         {'thickness': 0.2, 'height': 2.7, 'base': 0.0, 'alignment': 'left'})
 C.CreateWall(w).do(scene)
-# Fails in 0.44.0 on 0.5.9 (see Known bug); kept for when it is fixed:
+# Fails in OpenTrace 0.44.0 (see Known bug); kept for when it is fixed:
 DW.CreateHostedFill(scene, w, {'kind': 'window', 'id': 'win-a', 'host_id': str(w.uid),
         'opening_id': 'op-a', 'anchor': 'center', 'position': 2.5,
         'width': 1.2, 'height': 1.2, 'sill': 0.9}).do(scene)
